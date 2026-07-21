@@ -7,10 +7,11 @@
 
 CREATE TABLE license_reservations (
   id             BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  license_code  TEXT NOT NULL REFERENCES licenses (code) ON DELETE CASCADE,
+  license_code  TEXT NOT NULL,
   user_email        TEXT NOT NULL,
   is_european    BOOLEAN NOT NULL DEFAULT false,
-  created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (license_code, user_email)
 );
 
 COMMENT ON TABLE license_reservations IS

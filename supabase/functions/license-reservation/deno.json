@@ -1,0 +1,10 @@
+{
+  "imports": {
+    "@shared/": "../../../src/shared/",
+    "@domain/": "../../../src/types/",
+    "@integrations/": "../../../src/integrations/",
+    "zod": "npm:zod@3.24.4",
+    "@supabase/supabase-js": "npm:@supabase/supabase-js@2.108.1",
+    "hono": "jsr:@hono/hono@^4.7.10"
+  }
+}
