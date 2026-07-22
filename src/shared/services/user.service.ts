@@ -72,20 +72,21 @@ async function assertEmailAvailable(email: string): Promise<void> {
   }
 }
 
-async function assertActiveAdminActor(actor: AuthenticatedUser): Promise<void> {
-  const adminRow = await findUserByAuthUserId(actor.id);
+/**
+ * Confirms the caller is a provisioned, active dashboard user before mutating
+ * staff records. Which staff operations each role may perform is enforced by
+ * permission checks (RBAC) at the call sites — not by a hard-coded role here.
+ */
+async function assertActiveActor(actor: AuthenticatedUser): Promise<void> {
+  const actorRow = await findUserByAuthUserId(actor.id);
 
-  if (!adminRow) {
+  if (!actorRow) {
     throw new NotFoundError(
-      "Admin user record was not found. Run seed:admin to provision the admin user.",
+      "Your dashboard user record was not found. Contact an administrator.",
     );
   }
 
-  if (adminRow.role !== ADMIN_ROLE) {
-    throw new ForbiddenError("Only an admin can perform this action.");
-  }
-
-  if (adminRow.status !== "active") {
+  if (actorRow.status !== "active") {
     throw new ForbiddenError("Your account is not active.");
   }
 }
@@ -94,7 +95,7 @@ export async function listDashboardUsers(
   actor: AuthenticatedUser,
 ): Promise<ListUsersResponse> {
   assertCallerCanManageUsers(actor, PERMISSIONS.USERS_VIEW);
-  await assertActiveAdminActor(actor);
+  await assertActiveActor(actor);
 
   const users = await listDashboardUserRows();
 
@@ -112,7 +113,7 @@ export async function createDashboardUser(
 ): Promise<CreateUserResponse> {
   assertCallerCanManageUsers(actor, PERMISSIONS.USERS_CREATE);
   await assertEmailAvailable(input.email);
-  await assertActiveAdminActor(actor);
+  await assertActiveActor(actor);
 
   const password = generateSecurePassword();
   const serviceClient = getServiceClient();
@@ -223,7 +224,7 @@ export async function deleteDashboardUser(
   actor: AuthenticatedUser,
 ): Promise<DeleteUserResponse> {
   assertCallerCanManageUsers(actor, PERMISSIONS.USERS_DELETE);
-  await assertActiveAdminActor(actor);
+  await assertActiveActor(actor);
 
   if (authUserId === actor.id) {
     throw new ForbiddenError("You cannot delete your own account.");
@@ -305,7 +306,7 @@ export async function updateDashboardUserRole(
   actor: AuthenticatedUser,
 ): Promise<UpdateUserRoleResponse> {
   assertCallerCanManageUsers(actor, PERMISSIONS.USERS_UPDATE_ROLE);
-  await assertActiveAdminActor(actor);
+  await assertActiveActor(actor);
 
   if (authUserId === actor.id) {
     throw new ForbiddenError("You cannot change your own role.");
