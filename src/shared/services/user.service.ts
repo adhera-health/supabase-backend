@@ -12,6 +12,7 @@ import {
   findUserByEmail,
   insertDashboardUserRow,
   listDashboardUserRows,
+  updateDashboardUserNameByAuthUserId,
   updateDashboardUserRoleByAuthUserId,
 } from "@shared/database/queries/users.query.ts";
 import { getServiceClient } from "@shared/database/client.ts";
@@ -23,7 +24,12 @@ import {
   type CreateUserResponse,
   type DeleteUserResponse,
   type DashboardStaffRole,
+  type DashboardUser,
+  type GetMyProfileResponse,
   type ListUsersResponse,
+  type MyProfileResource,
+  type UpdateMyProfileInput,
+  type UpdateMyProfileResponse,
   type UpdateUserRoleInput,
   type UpdateUserRoleResponse,
 } from "@domain/user.ts";
@@ -89,6 +95,41 @@ async function assertActiveActor(actor: AuthenticatedUser): Promise<void> {
   if (actorRow.status !== "active") {
     throw new ForbiddenError("Your account is not active.");
   }
+}
+
+function toMyProfile(row: DashboardUser): MyProfileResource {
+  return {
+    auth_user_id: row.auth_user_id,
+    email: row.email,
+    name: row.name,
+    role: row.role,
+  };
+}
+
+export async function getOwnProfile(
+  actor: AuthenticatedUser,
+): Promise<GetMyProfileResponse> {
+  const row = await findUserByAuthUserId(actor.id);
+  if (!row) {
+    throw new NotFoundError(
+      "Your dashboard user record was not found. Contact an administrator.",
+    );
+  }
+  return { profile: toMyProfile(row) };
+}
+
+export async function updateOwnProfile(
+  actor: AuthenticatedUser,
+  input: UpdateMyProfileInput,
+): Promise<UpdateMyProfileResponse> {
+  await assertActiveActor(actor);
+  const updated = await updateDashboardUserNameByAuthUserId(actor.id, input.name);
+
+  logger.info("Dashboard user updated own profile", {
+    auth_user_id: actor.id,
+  });
+
+  return { profile: toMyProfile(updated) };
 }
 
 export async function listDashboardUsers(
@@ -392,6 +433,7 @@ export async function updateDashboardUserRole(
     user: {
       auth_user_id: updatedUser.auth_user_id,
       email: updatedUser.email,
+      name: updatedUser.name,
       role: input.role,
       created_at: updatedUser.created_at,
       updated_at: updatedUser.updated_at,

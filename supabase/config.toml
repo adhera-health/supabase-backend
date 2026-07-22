@@ -233,15 +233,20 @@ otp_length = 6
 # Number of seconds before the email OTP expires (defaults to 1 hour).
 otp_expiry = 3600
 
-# Use a production-ready SMTP server
+# Password recovery / forgot-password (PRD §19, notes.txt):
+# - LOCAL: emails are captured by Inbucket (see [inbucket] below) at
+#   http://127.0.0.1:54324 — no SMTP needed to test the reset flow.
+# - PRODUCTION: configure a real SMTP server so recovery emails are delivered,
+#   and add the dashboard origin to `additional_redirect_urls` above so the
+#   reset link (`/reset-password`) is allowed.
 # [auth.email.smtp]
 # enabled = true
 # host = "smtp.sendgrid.net"
 # port = 587
 # user = "apikey"
 # pass = "env(SENDGRID_API_KEY)"
-# admin_email = "admin@email.com"
-# sender_name = "Admin"
+# admin_email = "no-reply@adhera.example"
+# sender_name = "Adhera"
 
 # Uncomment to customize email template
 # [auth.email.template.invite]

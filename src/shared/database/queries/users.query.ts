@@ -13,10 +13,10 @@ import type {
 } from "@domain/user.ts";
 
 const USER_COLUMNS =
-  "id, auth_user_id, client_id, license_client_id, email, role, status, created_by_auth_user_id, created_at, updated_at";
+  "id, auth_user_id, client_id, license_client_id, email, name, role, status, created_by_auth_user_id, created_at, updated_at";
 
 const USER_LIST_COLUMNS =
-  "auth_user_id, email, role, created_at, updated_at";
+  "auth_user_id, email, name, role, created_at, updated_at";
 
 function mapUserRow(row: Record<string, unknown>): DashboardUser {
   return {
@@ -25,6 +25,7 @@ function mapUserRow(row: Record<string, unknown>): DashboardUser {
     client_id: (row.client_id as string | null) ?? null,
     license_client_id: (row.license_client_id as number | null) ?? null,
     email: row.email as string,
+    name: (row.name as string | null) ?? null,
     role: row.role as DashboardStaffRole,
     status: row.status as DashboardUserStatus,
     created_by_auth_user_id: (row.created_by_auth_user_id as string | null) ?? null,
@@ -52,6 +53,7 @@ function mapUserListRow(row: Record<string, unknown>): DashboardUserResource {
   return {
     auth_user_id: row.auth_user_id as string,
     email: row.email as string,
+    name: (row.name as string | null) ?? null,
     role: row.role as DashboardStaffRole,
     created_at: row.created_at as string,
     updated_at: row.updated_at as string,
@@ -170,6 +172,26 @@ export async function updateDashboardUserRoleByAuthUserId(
     .single();
 
   if (error) raiseDbError("Failed to update user role", error);
+
+  return mapUserRow(data);
+}
+
+export async function updateDashboardUserNameByAuthUserId(
+  authUserId: string,
+  name: string,
+): Promise<DashboardUser> {
+  const db = getServiceClient();
+  const { data, error } = await db
+    .from("users")
+    .update({
+      name,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("auth_user_id", authUserId)
+    .select(USER_COLUMNS)
+    .single();
+
+  if (error) raiseDbError("Failed to update user name", error);
 
   return mapUserRow(data);
 }

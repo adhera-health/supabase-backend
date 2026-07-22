@@ -7,6 +7,7 @@ import { ADMIN_CREATABLE_ROLES } from "@domain/user.ts";
 import type {
   CreateUserInput,
   DeleteUserParams,
+  UpdateMyProfileInput,
   UpdateUserRoleInput,
   UpdateUserRoleParams,
 } from "@domain/user.ts";
@@ -53,5 +54,12 @@ export const updateUserRoleBodySchema = z.object({
 }) satisfies z.ZodType<UpdateUserRoleInput>;
 
 export type UpdateUserRoleBodyPayload = z.infer<typeof updateUserRoleBodySchema>;
+
+/** PATCH /users/me */
+export const updateMyProfileBodySchema = z.object({
+  name: z.string().trim().min(1, "Name is required").max(120, "Name is too long"),
+}) satisfies z.ZodType<UpdateMyProfileInput>;
+
+export type UpdateMyProfileBodyPayload = z.infer<typeof updateMyProfileBodySchema>;
 
 export { parseSchema };
