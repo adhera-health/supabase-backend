@@ -16,12 +16,11 @@ extra_search_path = ["public", "extensions"]
 # The maximum number of rows returns from a view, table, or stored procedure. Limits payload size
 # for accidental or malicious requests.
 max_rows = 1000
-# Controls whether new tables, views, sequences and functions created in the `public` schema by
-# `postgres` are reachable through the Data API roles (`anon`, `authenticated`, `service_role`)
-# without explicit GRANTs. The implicit default flipped to `false` on 2026-05-30, which revokes
-# access to migration-created tables (service_role included) and causes "permission denied for
-# table ..." errors. We rely on the service role reaching these tables, so keep them exposed.
-auto_expose_new_tables = true
+# Keep the secure default (revoked): do NOT auto-expose public tables to anon/authenticated —
+# the anon key is public (shipped in the frontend) and there are no RLS policies, so auto-exposure
+# would make tables publicly readable. The backend uses the service role only; it is granted
+# explicitly in migration 20260710130000_grant_service_role_public.sql.
+auto_expose_new_tables = false
 
 [api.tls]
 # Enable HTTPS endpoints locally using a self-signed certificate.
