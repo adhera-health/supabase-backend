@@ -248,8 +248,20 @@ export interface InvitationDetailResource {
   last_activity_at: string | null;
 }
 
+/** Consent evidence summary shown on the member detail (checkbox model, DEC-3). */
+export interface InvitationConsentRecord {
+  version: string;
+  accepted_at: string;
+  ip_address: string | null;
+  user_agent: string | null;
+  withdrawn: boolean;
+  withdrawn_at: string | null;
+}
+
 /** GET /api/v1/invitations/{invitation_id} — response body */
 export interface GetInvitationResponse {
   invitation: InvitationDetailResource;
   attention_flags: InvitationAttentionFlagResource[];
+  /** Latest consent record for this invitation, or null if none yet. */
+  consent: InvitationConsentRecord | null;
 }

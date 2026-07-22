@@ -21,6 +21,7 @@ import {
   updateInvitationLatestToken,
 } from "@shared/database/queries/invitations.query.ts";
 import { resendInvitationTokenTransactionally } from "@shared/database/queries/transactional-db-rpc.query.ts";
+import { getUserConsentByInvitationId } from "@shared/database/queries/consent.query.ts";
 import {
   listActiveAttentionFlagsByInvitationId,
   listActiveAttentionFlagsByInvitationIds,
@@ -537,6 +538,7 @@ export async function getInvitationDetailForAdmin(
 ): Promise<GetInvitationResponse> {
   const invitation = await getInvitationForAdminAction(invitationUuid, actor);
   const attention_flags = await listActiveAttentionFlagsByInvitationId(invitation.id);
+  const userConsent = await getUserConsentByInvitationId(invitation.id);
 
   return {
     invitation: {
@@ -554,6 +556,16 @@ export async function getInvitationDetailForAdmin(
       last_activity_at: invitation.last_activity_at,
     },
     attention_flags,
+    consent: userConsent
+      ? {
+        version: userConsent.consent_version,
+        accepted_at: userConsent.accepted_at,
+        ip_address: userConsent.ip_address,
+        user_agent: userConsent.user_agent,
+        withdrawn: userConsent.is_withdrawn,
+        withdrawn_at: userConsent.withdrawn_at,
+      }
+      : null,
   };
 }
 
