@@ -19,6 +19,7 @@ import {
   createInvitationWithToken,
   dropOutInvitation,
   getInvitationAttentionReasonsForAdmin,
+  getInvitationDetailForAdmin,
   getInvitationForAdminAction,
   listInvitationsForAdmin,
   validateInvitationToken,
@@ -40,6 +41,7 @@ import {
   dropOutInvitationParamsSchema,
   emptyToUndefined,
   getInvitationAttentionReasonsParamsSchema,
+  getInvitationParamsSchema,
   listClientProgramsParamsSchema,
   listInvitationsQuerySchema,
   parseSchema,
@@ -51,6 +53,7 @@ import { toInvitationCreatedResource } from "@shared/utils/api-mappers.ts";
 import type {
   CreateInvitationResponse,
   DropOutInvitationResponse,
+  GetInvitationResponse,
   ResendInvitationResponse,
 } from "@domain/invitation.ts";
 import type { GetInvitationAttentionReasonsResponse } from "@domain/attention.ts";
@@ -454,6 +457,30 @@ async function handleDropOutInvitation(c: Context) {
   return success(response);
 }
 
+async function handleGetInvitation(c: Context) {
+  const logger = createLogger("invitations");
+
+  const params = parseSchema(getInvitationParamsSchema, {
+    invitation_id: c.req.param("invitation_id"),
+  });
+
+  const actor = await requireAnyPermission(c.req.header("Authorization"), [
+    PERMISSIONS.INVITATIONS_VIEW_ALL,
+    PERMISSIONS.INVITATIONS_VIEW_OWN,
+  ]);
+
+  logger.info("Loading invitation detail", {
+    invitation_id: params.invitation_id,
+    role: actor.role,
+  });
+
+  const result = await getInvitationDetailForAdmin(params.invitation_id, actor);
+
+  const response: GetInvitationResponse = result;
+
+  return success(response);
+}
+
 async function handleGetInvitationAttentionReasons(c: Context) {
   const logger = createLogger("invitations");
 
@@ -489,6 +516,7 @@ app.post("/send", handleSendInvitation);
 app.get("/validate-token", handleValidateToken);
 app.post("/:invitation_id/resend", handleResendInvitation);
 app.get("/:invitation_id/attention-reasons", handleGetInvitationAttentionReasons);
+app.get("/:invitation_id", handleGetInvitation);
 app.post("/:invitation_id/drop-out", handleDropOutInvitation);
 
 export default app;

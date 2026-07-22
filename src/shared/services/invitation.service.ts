@@ -42,6 +42,7 @@ import { BadRequestError, ConflictError, NotFoundError } from "@shared/utils/err
 import type {
   DropOutInvitationResponse,
   DropOutReasonType,
+  GetInvitationResponse,
   InvitationDropoutFailureStage,
   InvitationStatus,
   ListInvitationsResponse,
@@ -526,6 +527,32 @@ export async function getInvitationAttentionReasonsForAdmin(
 
   return {
     invitation_uuid: invitation.uuid,
+    attention_flags,
+  };
+}
+
+export async function getInvitationDetailForAdmin(
+  invitationUuid: string,
+  actor: AuthenticatedUser,
+): Promise<GetInvitationResponse> {
+  const invitation = await getInvitationForAdminAction(invitationUuid, actor);
+  const attention_flags = await listActiveAttentionFlagsByInvitationId(invitation.id);
+
+  return {
+    invitation: {
+      invitation_uuid: invitation.uuid,
+      email: invitation.email,
+      client_id: invitation.client_id,
+      program_id: invitation.program_id,
+      status: invitation.status,
+      invited_at: invitation.invited_at,
+      email_opened_at: invitation.email_opened_at,
+      registered_at: invitation.registered_at,
+      consent_completed_at: invitation.consent_completed_at,
+      activated_at: invitation.activated_at,
+      dropped_out_at: invitation.dropped_out_at,
+      last_activity_at: invitation.last_activity_at,
+    },
     attention_flags,
   };
 }

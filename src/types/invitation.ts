@@ -231,3 +231,25 @@ export interface DropOutInvitationResponse {
 export interface GetInvitationAttentionReasonsParams {
   invitation_id: string;
 }
+
+/** GET /api/v1/invitations/{invitation_id} — full detail resource (timeline). */
+export interface InvitationDetailResource {
+  invitation_uuid: string;
+  email: string;
+  client_id: string;
+  program_id: string;
+  status: InvitationStatus;
+  invited_at: string;
+  email_opened_at: string | null;
+  registered_at: string | null;
+  consent_completed_at: string | null;
+  activated_at: string | null;
+  dropped_out_at: string | null;
+  last_activity_at: string | null;
+}
+
+/** GET /api/v1/invitations/{invitation_id} — response body */
+export interface GetInvitationResponse {
+  invitation: InvitationDetailResource;
+  attention_flags: InvitationAttentionFlagResource[];
+}
