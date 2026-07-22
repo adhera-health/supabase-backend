@@ -14,6 +14,46 @@ import type {
   ReminderScheduleSlot,
 } from "@domain/reminder.ts";
 
+export interface ReminderLogWithInvitation extends OnboardingReminderLogRow {
+  patient_invitations: { uuid: string; email: string } | null;
+}
+
+export interface ListReminderLogsFilters {
+  invitationUuid?: string;
+  page: number;
+  perPage: number;
+}
+
+/** Paginated reminder history, joined to the member (email + uuid). */
+export async function listReminderLogs(
+  filters: ListReminderLogsFilters,
+): Promise<{ rows: ReminderLogWithInvitation[]; total: number }> {
+  const db = getServiceClient();
+  const fromIdx = (filters.page - 1) * filters.perPage;
+  const toIdx = fromIdx + filters.perPage - 1;
+
+  let query = db
+    .from("onboarding_reminder_logs")
+    .select(
+      "id, invitation_id, reminder_type, schedule_slot, scheduled_for, sent_at, status, error_message, created_at, patient_invitations!inner(uuid, email)",
+      { count: "exact" },
+    )
+    .order("created_at", { ascending: false })
+    .range(fromIdx, toIdx);
+
+  if (filters.invitationUuid) {
+    query = query.eq("patient_invitations.uuid", filters.invitationUuid);
+  }
+
+  const { data, count, error } = await query;
+  if (error) raiseDbError("Failed to list reminder logs", error);
+
+  return {
+    rows: (data ?? []) as unknown as ReminderLogWithInvitation[],
+    total: count ?? 0,
+  };
+}
+
 export async function getReminderLogByIdempotencyKey(
   invitationId: number,
   reminderType: ReminderDeliveryType,
