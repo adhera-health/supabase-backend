@@ -7,6 +7,7 @@ import { z } from "zod";
 import { parseSchema } from "@shared/validators/parse-schema.ts";
 import type {
   CreateLicenseReservationInput,
+  GetLicenseReservationByEmailInput,
 } from "@domain/license-reservation.ts";
 
 const emailSchema = z
@@ -18,15 +19,15 @@ const emailSchema = z
 /** POST /api/v1/license-reservation */
 export const createLicenseReservationSchema = z.object({
   user_email: emailSchema,
-  license_code: z.string().trim().min(1, "License code is required"),
+  license_code: z.string().trim().min(1, "License code is required")
 }) satisfies z.ZodType<CreateLicenseReservationInput>;
 
 export type CreateLicenseReservationPayload = z.infer<typeof createLicenseReservationSchema>;
 
 /** GET /license-reservation-by-email/ */
 export const getLicenseReservationByEmailSchema = z.object({
-  user_email: emailSchema,
-});
+  user_email: emailSchema
+}) satisfies z.ZodType<GetLicenseReservationByEmailInput>;
 
 export type GetLicenseReservationByEmailPayload = z.infer<
   typeof getLicenseReservationByEmailSchema

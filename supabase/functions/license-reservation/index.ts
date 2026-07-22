@@ -1,8 +1,12 @@
-import { requirePermission } from "@shared/auth/authorization.ts";
+import { 
+    requirePermission,
+    assertSupabaseAnonKey 
+} from "@shared/auth/authorization.ts";
 import { PERMISSIONS } from "@shared/auth/permissions.ts";
 import { logAuditEvent } from "@shared/services/audit.service.ts";
 import {
   createLicenseReservation,
+  getLicenseReservationByEmail
 } from "@shared/services/license-reservation.service.ts";
 import { BadRequestError } from "@shared/utils/errors.ts";
 import { createHonoApp } from "@shared/utils/hono.ts";
@@ -11,8 +15,9 @@ import { createLogger } from "@shared/utils/logger.ts";
 import { getClientIp } from "@shared/utils/request.ts";
 import { success } from "@shared/utils/response.ts";
 import {
-  createLicenseReservationSchema,
-  getLicenseReservationByEmailSchema,
+    emptyToUndefined,
+    createLicenseReservationSchema,
+    getLicenseReservationByEmailSchema,
 } from "@shared/validators/license-reservation.schema.ts";
 import { parseSchema } from "@shared/validators/parse-schema.ts";
 
@@ -29,6 +34,11 @@ async function parseJsonBody(c: Context): Promise<unknown> {
   }
 }
 
+/**
+ * POST / : Save license reservation in DB
+ * @param c 
+ * @returns 
+ */
 async function handleCreateLicenseReservation(c: Context) 
 {
     const logger = createLogger("license-reservation");
@@ -45,16 +55,6 @@ async function handleCreateLicenseReservation(c: Context)
 
     const result = await createLicenseReservation(input);
 
-    /*await logAuditEvent({
-        actor,
-        action: "create_license_reservation",
-        details: {
-            user_email: input.user_email,
-            license_code: input.license_code,
-        },
-        ip_address: actorIp,
-    });*/
-
     await logAuditEvent({
         entity_type: "license_reservation",
         entity_id: String(result.id),
@@ -64,13 +64,49 @@ async function handleCreateLicenseReservation(c: Context)
         metadata_json: {
             user_email: input.user_email,
             license_code: input.license_code,
+            is_european: input.is_european
         },
     });
 
     return success(result);
+}
 
+/**
+ *  GET /by-email : Get a license reservation by the user email
+ * @param c 
+ * @returns 
+ */
+async function handleGetLicenseReservationByEmail(c: Context) 
+{
+    assertSupabaseAnonKey(c.req.header("apikey"));
+    const logger = createLogger("license-reservation");
+    const actorIp = getClientIp(c) ?? "unknown";
+
+    const input = parseSchema(getLicenseReservationByEmailSchema, {
+        user_email: emptyToUndefined(c.req.query("user_email")),
+    });
+
+    logger.info("Getting license reservation");
+
+    const result = await getLicenseReservationByEmail(input);
+
+    await logAuditEvent({
+        entity_type: "license_reservation",
+        entity_id: String(result.id),
+        action: "license_reservation_obtained",
+        actor_user_id: null,
+        actor_ip: actorIp,
+        metadata_json: {
+            user_email: result.user_email,
+            license_code: result.license_code,
+            is_european: result.is_european
+        },
+    });
+
+    return success(result);
 }
 
 app.post("/", handleCreateLicenseReservation);
+app.get("/by-email", handleGetLicenseReservationByEmail);
 
 export default app;

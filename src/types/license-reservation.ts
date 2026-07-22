@@ -19,6 +19,7 @@ export interface CreateLicenseReservationInput {
 
 export interface CreateLicenseReservationResult {
   success: boolean;
+  id: number;
   license_code: string;
   user_email: string;
   is_european: boolean;
@@ -33,6 +34,7 @@ export interface GetLicenseReservationByEmailInput {
 
 export interface GetLicenseReservationByEmailResult {
   success: boolean;
+  id: number;
   license_code: string | null;
   user_email: string | null;
   is_european: boolean | null;

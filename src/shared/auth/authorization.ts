@@ -12,6 +12,7 @@ import {
   getAuthenticatedSupabaseUser,
   type AuthenticatedUser,
 } from "@shared/auth/request-auth.ts";
+import { ForbiddenError, UnauthorizedError } from "@shared/utils/errors.ts";
 
 /** Verifies JWT and requires a single permission. */
 export async function requirePermission(
@@ -33,4 +34,22 @@ export async function requireAnyPermission(
   const user = await getAuthenticatedSupabaseUser(token);
   assertAnyPermission(user, permissions);
   return user;
+}
+
+export function assertSupabaseAnonKey(
+  apikeyHeader: string | undefined,
+): void {
+  const configuredKey = Deno.env.get("SUPABASE_ANON_KEY")?.trim();
+
+  if (!configuredKey) {
+    throw new Error("SUPABASE_ANON_KEY is not configured");
+  }
+
+  if (!apikeyHeader?.trim()) {
+    throw new UnauthorizedError("Missing apikey header");
+  }
+
+  if (apikeyHeader.trim() !== configuredKey) {
+    throw new ForbiddenError("Invalid apikey header");
+  }
 }

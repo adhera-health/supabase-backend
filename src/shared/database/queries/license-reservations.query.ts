@@ -7,6 +7,7 @@ import { AppError, ConflictError } from "@shared/utils/errors.ts";
 import { raiseDbError } from "@shared/database/queries/db-error.ts";
 import type {
   CreateLicenseReservationInput,
+  GetLicenseReservationByEmailInput,
   LicenseReservation,
 } from "@domain/license-reservation.ts";
 
@@ -32,6 +33,24 @@ export async function createLicenseReservationRow(
 
     if (error) {
       raiseDbError("Failed to create or fetch license reservation", error);
+    }
+
+  return data as LicenseReservation;
+}
+
+export async function getLicenseReservationByEmailRow(
+  input: GetLicenseReservationByEmailInput,
+): Promise<LicenseReservation> 
+{
+  const db = getServiceClient();
+  const { data, error } = await db
+    .from("license_reservations")
+    .select()
+    .eq("user_email", input.user_email)
+    .single();
+
+    if (error) {
+      raiseDbError("Failed to fetch license reservation", error);
     }
 
   return data as LicenseReservation;
