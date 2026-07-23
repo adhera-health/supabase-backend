@@ -12,7 +12,10 @@ import {
   getAuthenticatedSupabaseUser,
   type AuthenticatedUser,
 } from "@shared/auth/request-auth.ts";
-import { ForbiddenError, UnauthorizedError } from "@shared/utils/errors.ts";
+import { ForbiddenError, UnauthorizedError, AppError } from "@shared/utils/errors.ts";
+import type { Context } from "hono";
+
+const LICENSE_RESERVATION_SECRET_HEADER = "x-license-reservation-secret";
 
 /** Verifies JWT and requires a single permission. */
 export async function requirePermission(
@@ -36,20 +39,27 @@ export async function requireAnyPermission(
   return user;
 }
 
-export function assertSupabaseAnonKey(
-  apikeyHeader: string | undefined,
-): void {
-  const configuredKey = Deno.env.get("SUPABASE_ANON_KEY")?.trim();
+export function assertLicenseReservationSecret(c: Context): void 
+{
+  const configuredSecret = Deno.env.get("LICENSE_RESERVATION_SECRET")?.trim();
+  const isProduction = Deno.env.get("ENVIRONMENT") === "production";
 
-  if (!configuredKey) {
-    throw new Error("SUPABASE_ANON_KEY is not configured");
-  }
+    if (!configuredSecret) {
+        if (isProduction) {
+        throw new AppError("LICENSE_RESERVATION_SECRET is required in production", {
+            statusCode: 500,
+            code: "INTERNAL_ERROR",
+        });
+        }
+        return;
+    }
+    const headerSecret = c.req.header(LICENSE_RESERVATION_SECRET_HEADER)?.trim();
+    
+    if (!headerSecret) {
+        throw new UnauthorizedError("Missing license reservation credentials");
+    }
 
-  if (!apikeyHeader?.trim()) {
-    throw new UnauthorizedError("Missing apikey header");
-  }
-
-  if (apikeyHeader.trim() !== configuredKey) {
-    throw new ForbiddenError("Invalid apikey header");
-  }
+    if (headerSecret !== configuredSecret) {
+        throw new ForbiddenError("Invalid license reservation credentials");
+    }
 }

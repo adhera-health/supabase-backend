@@ -3,7 +3,7 @@
  */
 
 import { getServiceClient } from "@shared/database/client.ts";
-import { AppError, ConflictError } from "@shared/utils/errors.ts";
+import { NotFoundError } from "@shared/utils/errors.ts";
 import { raiseDbError } from "@shared/database/queries/db-error.ts";
 import type {
   CreateLicenseReservationInput,
@@ -26,10 +26,14 @@ export async function createLicenseReservationRow(
         license_code: input.license_code,
         is_european: false,
       },
-      { onConflict: ["user_email", "license_code"] },
+      { onConflict: "user_email" },
     )
     .select()
-    .single();
+    .maybeSingle();
+
+    if (! data) {
+      throw new NotFoundError("Invitation not found");
+    }
 
     if (error) {
       raiseDbError("Failed to create or fetch license reservation", error);

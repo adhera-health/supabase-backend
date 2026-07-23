@@ -1,6 +1,6 @@
 import { 
     requirePermission,
-    assertSupabaseAnonKey 
+    assertLicenseReservationSecret 
 } from "@shared/auth/authorization.ts";
 import { PERMISSIONS } from "@shared/auth/permissions.ts";
 import { logAuditEvent } from "@shared/services/audit.service.ts";
@@ -23,7 +23,6 @@ import { parseSchema } from "@shared/validators/parse-schema.ts";
 
 
 const FUNCTION_NAME = "license-reservation";
-
 const app = createHonoApp().basePath(`/${FUNCTION_NAME}`);
 
 async function parseJsonBody(c: Context): Promise<unknown> {
@@ -64,7 +63,7 @@ async function handleCreateLicenseReservation(c: Context)
         metadata_json: {
             user_email: input.user_email,
             license_code: input.license_code,
-            is_european: input.is_european
+            is_european: result.is_european
         },
     });
 
@@ -78,7 +77,8 @@ async function handleCreateLicenseReservation(c: Context)
  */
 async function handleGetLicenseReservationByEmail(c: Context) 
 {
-    assertSupabaseAnonKey(c.req.header("apikey"));
+    assertLicenseReservationSecret(c);
+    
     const logger = createLogger("license-reservation");
     const actorIp = getClientIp(c) ?? "unknown";
 

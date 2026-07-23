@@ -11,7 +11,7 @@ CREATE TABLE license_reservations (
   user_email        TEXT NOT NULL,
   is_european    BOOLEAN NOT NULL DEFAULT false,
   created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
-  UNIQUE (license_code, user_email)
+  UNIQUE (user_email)
 );
 
 COMMENT ON TABLE license_reservations IS
