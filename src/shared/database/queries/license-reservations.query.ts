@@ -31,12 +31,12 @@ export async function createLicenseReservationRow(
     .select()
     .maybeSingle();
 
-    if (! data) {
-      throw new NotFoundError("Invitation not found");
-    }
-
     if (error) {
       raiseDbError("Failed to create or fetch license reservation", error);
+    }
+    
+    if (!data) {
+      throw new NotFoundError("License reservation could not be created or was not found");
     }
 
   return data as LicenseReservation;
