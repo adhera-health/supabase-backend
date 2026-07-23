@@ -72,7 +72,7 @@ async function handleCreateLicenseReservation(c: Context)
 }
 
 /**
- *  GET /by-email : Get a license reservation by the user email
+ *  POST /get-by-email : Get a license reservation by the user email
  * @param c 
  * @returns 
  */
@@ -82,9 +82,7 @@ async function handleGetLicenseReservationByEmail(c: Context)
     const logger = createLogger("license-reservation");
     const actorIp = getClientIp(c) ?? "unknown";
 
-    const input = parseSchema(getLicenseReservationByEmailSchema, {
-        user_email: emptyToUndefined(c.req.query("user_email")),
-    });
+    const input = parseSchema(getLicenseReservationByEmailSchema, await parseJsonBody(c));
 
     logger.info("Getting license reservation");
 
@@ -107,6 +105,6 @@ async function handleGetLicenseReservationByEmail(c: Context)
 }
 
 app.post("/", handleCreateLicenseReservation);
-app.get("/by-email", handleGetLicenseReservationByEmail);
+app.post("/get-by-email", handleGetLicenseReservationByEmail);
 
 export default app;
