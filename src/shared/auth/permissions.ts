@@ -38,6 +38,9 @@ export const PERMISSIONS = {
   CONSENTS_ACCEPT: "consents.accept",
   CONSENTS_WITHDRAW: "consents.withdraw",
   ONBOARDING_MARK_ACTIVE: "onboarding.mark_active",
+
+  // License reservations
+  LICENSE_RESERVATIONS_CREATE: "license_reservations.create",
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
@@ -51,6 +54,7 @@ const RECRUITER_PERMISSIONS: readonly Permission[] = [
   PERMISSIONS.INVITATIONS_SEND,
   PERMISSIONS.INVITATIONS_RESEND,
   PERMISSIONS.INVITATIONS_VIEW_OWN,
+  PERMISSIONS.LICENSE_RESERVATIONS_CREATE,
 ];
 
 const MANAGER_PERMISSIONS: readonly Permission[] = [

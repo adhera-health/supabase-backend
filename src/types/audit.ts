@@ -7,7 +7,7 @@ export const INVITATION_AUDIT_ACTIONS = [
   "invitation_resent",
   "email_opened",
   "drop_out_recorded",
-  "auto_drop_out",
+  "auto_drop_out"
 ] as const;
 
 export type InvitationAuditAction = (typeof INVITATION_AUDIT_ACTIONS)[number];
@@ -58,3 +58,10 @@ export interface InsertAuditLogInput {
   actor_ip?: string | null;
   metadata_json?: Record<string, unknown> | null;
 }
+
+export const LICENSE_AUDIT_ACTIONS = [
+  "license_reserved",
+  "license_reservation_obtained"
+] as const;
+
+export type LicenseAuditAction = (typeof LICENSE_AUDIT_ACTIONS)[number];
