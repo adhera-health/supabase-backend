@@ -95,10 +95,11 @@ async function main(): Promise<void> {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
+  // Unscoped admin: clients/programs come dynamically from Adhera Core, so there
+  // is no fixed tenant list to restrict to. Omitting client_ids/program_ids means
+  // full access (see parseAdminScopeFromMetadata → null = unrestricted).
   const appMetadata = {
     role: "admin",
-    client_ids: [DEV_ADMIN_CLIENT_ID],
-    program_ids: [DEV_ADMIN_PROGRAM_ID],
   };
 
   const { data: created, error: createError } = await client.auth.admin.createUser({
