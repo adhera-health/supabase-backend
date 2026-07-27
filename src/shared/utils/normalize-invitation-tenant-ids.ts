@@ -1,13 +1,16 @@
 /**
- * Maps invitation send tenant ids to UUIDs for DB storage and optional license snapshot.
+ * Resolves invitation tenant ids for DB storage + license snapshot.
+ *
+ * Clients/programs live only in Adhera Core and are identified by integers. The
+ * integer IS the tenant identity — it is stored verbatim as its string form
+ * ("36"), with no internal UUID and no mapping. The license snapshot is built
+ * directly from the integers. String inputs (already-normalized ids echoed back)
+ * pass through unchanged.
  */
 
 import type { InvitationLicenseSnapshot } from "@domain/license-snapshot.ts";
 import type { TenantIdInput } from "@domain/tenant-id.ts";
 import { BadRequestError } from "@shared/utils/errors.ts";
-
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export interface NormalizedInvitationTenantIds {
   client_id: string;
@@ -15,145 +18,19 @@ export interface NormalizedInvitationTenantIds {
   licenseSnapshot?: InvitationLicenseSnapshot;
 }
 
-interface ExternalTenantMapEntry {
-  external_client_id: number;
-  external_program_id: number;
-  client_id: string;
-  program_id: string;
-  license_client_id?: number;
-  license_program_id?: number;
-  core_api_host?: string;
-}
-
 function isIntegerTenantId(value: TenantIdInput): value is number {
   return typeof value === "number";
 }
 
-function parseExternalTenantMap(): ExternalTenantMapEntry[] {
-  const raw = Deno.env.get("INVITATION_EXTERNAL_TENANT_MAP")?.trim();
-  if (!raw) return [];
-
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed as ExternalTenantMapEntry[];
-  } catch {
-    return [];
-  }
-}
-
-function requireCoreApiHost(): string {
-  const host = Deno.env.get("LICENSE_CORE_API_HOST")?.trim();
+function resolveCoreApiHost(): string {
+  const host = Deno.env.get("LICENSE_CORE_API_HOST")?.trim() ||
+    Deno.env.get("ADHERA_CORE_BASE_URL")?.trim();
   if (!host) {
     throw new BadRequestError(
-      "LICENSE_CORE_API_HOST is required when using integer client_id and program_id.",
+      "Set ADHERA_CORE_BASE_URL (or LICENSE_CORE_API_HOST) to send invitations.",
     );
   }
   return host;
-}
-
-function devAdminTenantUuids(): { client_id: string; program_id: string } | null {
-  const client_id = Deno.env.get("DEV_ADMIN_CLIENT_ID")?.trim();
-  const program_id = Deno.env.get("DEV_ADMIN_PROGRAM_ID")?.trim();
-  if (!client_id || !program_id) return null;
-  return { client_id, program_id };
-}
-
-function parseEnvPositiveInt(name: string): number | null {
-  const raw = Deno.env.get(name)?.trim();
-  if (!raw) return null;
-  const parsed = Number.parseInt(raw, 10);
-  if (!Number.isFinite(parsed) || parsed <= 0) return null;
-  return parsed;
-}
-
-function resolveDevTenantFromLicensePair(
-  licenseClientId: number,
-  licenseProgramId: number,
-): NormalizedInvitationTenantIds | null {
-  const devLicenseClient = parseEnvPositiveInt("DEV_ADMIN_LICENSE_CLIENT_ID");
-  const devLicenseProgram = parseEnvPositiveInt("DEV_ADMIN_LICENSE_PROGRAM_ID");
-  if (devLicenseClient === null || devLicenseProgram === null) return null;
-  if (licenseClientId !== devLicenseClient || licenseProgramId !== devLicenseProgram) {
-    return null;
-  }
-
-  const tenant = devAdminTenantUuids();
-  if (!tenant) return null;
-
-  return {
-    ...tenant,
-    licenseSnapshot: {
-      license_client_id: devLicenseClient,
-      license_program_id: devLicenseProgram,
-      core_api_host: requireCoreApiHost(),
-    },
-  };
-}
-
-function resolveFromExternalMap(
-  externalClientId: number,
-  externalProgramId: number,
-): NormalizedInvitationTenantIds | null {
-  const mapEntry = parseExternalTenantMap().find(
-    (entry) =>
-      entry.external_client_id === externalClientId &&
-      entry.external_program_id === externalProgramId,
-  );
-
-  if (!mapEntry) return null;
-
-  return {
-    client_id: mapEntry.client_id,
-    program_id: mapEntry.program_id,
-    licenseSnapshot: {
-      license_client_id: mapEntry.license_client_id ?? externalClientId,
-      license_program_id: mapEntry.license_program_id ?? externalProgramId,
-      core_api_host: mapEntry.core_api_host ?? requireCoreApiHost(),
-    },
-  };
-}
-
-function resolveFromLicenseEnv(
-  externalClientId: number,
-  externalProgramId: number,
-): NormalizedInvitationTenantIds | null {
-  const licenseClientId = parseEnvPositiveInt("LICENSE_CLIENT_ID");
-  const licenseProgramId = parseEnvPositiveInt("LICENSE_PROGRAM_ID");
-  if (licenseClientId === null || licenseProgramId === null) return null;
-  if (licenseClientId !== externalClientId || licenseProgramId !== externalProgramId) {
-    return null;
-  }
-
-  const tenant = devAdminTenantUuids();
-  if (!tenant) return null;
-
-  return {
-    ...tenant,
-    licenseSnapshot: {
-      license_client_id: licenseClientId,
-      license_program_id: licenseProgramId,
-      core_api_host: requireCoreApiHost(),
-    },
-  };
-}
-
-function resolveIntegerTenantIds(
-  externalClientId: number,
-  externalProgramId: number,
-): NormalizedInvitationTenantIds {
-  const fromMap = resolveFromExternalMap(externalClientId, externalProgramId);
-  if (fromMap) return fromMap;
-
-  const fromDevLicense = resolveDevTenantFromLicensePair(externalClientId, externalProgramId);
-  if (fromDevLicense) return fromDevLicense;
-
-  const fromLicenseEnv = resolveFromLicenseEnv(externalClientId, externalProgramId);
-  if (fromLicenseEnv) return fromLicenseEnv;
-
-  throw new BadRequestError(
-    "No tenant mapping for this client/program id pair. Use UUID tenant ids or configure INVITATION_EXTERNAL_TENANT_MAP.",
-  );
 }
 
 export function normalizeInvitationTenantIds(
@@ -165,18 +42,30 @@ export function normalizeInvitationTenantIds(
 
   if (clientIsInt !== programIsInt) {
     throw new BadRequestError(
-      "client_id and program_id must both be UUIDs or both be positive integers.",
+      "client_id and program_id must both be integers or both be strings.",
     );
   }
 
+  // String pass-through (already-stored ids echoed back). No license snapshot;
+  // the caller falls back to resolveInvitationLicenseSnapshot if needed.
   if (!clientIsInt) {
-    const clientUuid = clientId as string;
-    const programUuid = programId as string;
-    if (!UUID_PATTERN.test(clientUuid) || !UUID_PATTERN.test(programUuid)) {
-      throw new BadRequestError("client_id and program_id must be valid UUIDs.");
-    }
-    return { client_id: clientUuid, program_id: programUuid };
+    return {
+      client_id: String(clientId),
+      program_id: String(programId),
+    };
   }
 
-  return resolveIntegerTenantIds(clientId, programId as number);
+  // Integer path: the Adhera Core integer is the identity, stored as its string.
+  const clientInt = clientId as number;
+  const programInt = programId as number;
+
+  return {
+    client_id: String(clientInt),
+    program_id: String(programInt),
+    licenseSnapshot: {
+      license_client_id: clientInt,
+      license_program_id: programInt,
+      core_api_host: resolveCoreApiHost(),
+    },
+  };
 }

@@ -12,6 +12,7 @@ import {
   findUserByEmail,
   insertDashboardUserRow,
   listDashboardUserRows,
+  updateDashboardUserNameByAuthUserId,
   updateDashboardUserRoleByAuthUserId,
 } from "@shared/database/queries/users.query.ts";
 import { getServiceClient } from "@shared/database/client.ts";
@@ -23,7 +24,12 @@ import {
   type CreateUserResponse,
   type DeleteUserResponse,
   type DashboardStaffRole,
+  type DashboardUser,
+  type GetMyProfileResponse,
   type ListUsersResponse,
+  type MyProfileResource,
+  type UpdateMyProfileInput,
+  type UpdateMyProfileResponse,
   type UpdateUserRoleInput,
   type UpdateUserRoleResponse,
 } from "@domain/user.ts";
@@ -72,29 +78,65 @@ async function assertEmailAvailable(email: string): Promise<void> {
   }
 }
 
-async function assertActiveAdminActor(actor: AuthenticatedUser): Promise<void> {
-  const adminRow = await findUserByAuthUserId(actor.id);
+/**
+ * Confirms the caller is a provisioned, active dashboard user before mutating
+ * staff records. Which staff operations each role may perform is enforced by
+ * permission checks (RBAC) at the call sites — not by a hard-coded role here.
+ */
+async function assertActiveActor(actor: AuthenticatedUser): Promise<void> {
+  const actorRow = await findUserByAuthUserId(actor.id);
 
-  if (!adminRow) {
+  if (!actorRow) {
     throw new NotFoundError(
-      "Admin user record was not found. Run seed:admin to provision the admin user.",
+      "Your dashboard user record was not found. Contact an administrator.",
     );
   }
 
-  if (adminRow.role !== ADMIN_ROLE) {
-    throw new ForbiddenError("Only an admin can perform this action.");
-  }
-
-  if (adminRow.status !== "active") {
+  if (actorRow.status !== "active") {
     throw new ForbiddenError("Your account is not active.");
   }
+}
+
+function toMyProfile(row: DashboardUser): MyProfileResource {
+  return {
+    auth_user_id: row.auth_user_id,
+    email: row.email,
+    name: row.name,
+    role: row.role,
+  };
+}
+
+export async function getOwnProfile(
+  actor: AuthenticatedUser,
+): Promise<GetMyProfileResponse> {
+  const row = await findUserByAuthUserId(actor.id);
+  if (!row) {
+    throw new NotFoundError(
+      "Your dashboard user record was not found. Contact an administrator.",
+    );
+  }
+  return { profile: toMyProfile(row) };
+}
+
+export async function updateOwnProfile(
+  actor: AuthenticatedUser,
+  input: UpdateMyProfileInput,
+): Promise<UpdateMyProfileResponse> {
+  await assertActiveActor(actor);
+  const updated = await updateDashboardUserNameByAuthUserId(actor.id, input.name);
+
+  logger.info("Dashboard user updated own profile", {
+    auth_user_id: actor.id,
+  });
+
+  return { profile: toMyProfile(updated) };
 }
 
 export async function listDashboardUsers(
   actor: AuthenticatedUser,
 ): Promise<ListUsersResponse> {
   assertCallerCanManageUsers(actor, PERMISSIONS.USERS_VIEW);
-  await assertActiveAdminActor(actor);
+  await assertActiveActor(actor);
 
   const users = await listDashboardUserRows();
 
@@ -112,7 +154,7 @@ export async function createDashboardUser(
 ): Promise<CreateUserResponse> {
   assertCallerCanManageUsers(actor, PERMISSIONS.USERS_CREATE);
   await assertEmailAvailable(input.email);
-  await assertActiveAdminActor(actor);
+  await assertActiveActor(actor);
 
   const password = generateSecurePassword();
   const serviceClient = getServiceClient();
@@ -223,7 +265,7 @@ export async function deleteDashboardUser(
   actor: AuthenticatedUser,
 ): Promise<DeleteUserResponse> {
   assertCallerCanManageUsers(actor, PERMISSIONS.USERS_DELETE);
-  await assertActiveAdminActor(actor);
+  await assertActiveActor(actor);
 
   if (authUserId === actor.id) {
     throw new ForbiddenError("You cannot delete your own account.");
@@ -305,7 +347,7 @@ export async function updateDashboardUserRole(
   actor: AuthenticatedUser,
 ): Promise<UpdateUserRoleResponse> {
   assertCallerCanManageUsers(actor, PERMISSIONS.USERS_UPDATE_ROLE);
-  await assertActiveAdminActor(actor);
+  await assertActiveActor(actor);
 
   if (authUserId === actor.id) {
     throw new ForbiddenError("You cannot change your own role.");
@@ -391,6 +433,7 @@ export async function updateDashboardUserRole(
     user: {
       auth_user_id: updatedUser.auth_user_id,
       email: updatedUser.email,
+      name: updatedUser.name,
       role: input.role,
       created_at: updatedUser.created_at,
       updated_at: updatedUser.updated_at,

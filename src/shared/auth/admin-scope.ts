@@ -11,17 +11,17 @@ export interface AdminScope {
   programIds: string[] | null;
 }
 
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-function parseUuidList(value: unknown): string[] | null {
+/** Parses a scope list of tenant ids (Adhera Core integer ids as strings). */
+function parseScopeIdList(value: unknown): string[] | null {
   if (value === undefined || value === null) return null;
 
   const raw = Array.isArray(value) ? value : [value];
   return raw
-    .filter((item): item is string => typeof item === "string")
-    .map((item) => item.trim())
-    .filter((item) => UUID_PATTERN.test(item));
+    .filter((item): item is string | number =>
+      typeof item === "string" || typeof item === "number"
+    )
+    .map((item) => String(item).trim())
+    .filter((item) => item.length > 0);
 }
 
 /** Reads optional client/program scope from admin JWT app_metadata. */
@@ -37,8 +37,8 @@ export function parseAdminScopeFromMetadata(metadata: Record<string, unknown>): 
   programIds: string[] | null;
 } {
   return {
-    clientIds: parseUuidList(metadata.client_ids),
-    programIds: parseUuidList(metadata.program_ids),
+    clientIds: parseScopeIdList(metadata.client_ids),
+    programIds: parseScopeIdList(metadata.program_ids),
   };
 }
 

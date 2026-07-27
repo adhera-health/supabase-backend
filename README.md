@@ -33,7 +33,8 @@ Functions are available at:
 
 | Function | Purpose |
 |----------|---------|
-| `invitations` | Send, resend, list, validate token, drop-out |
+| `invitations` | Send, resend, list, detail, validate token, drop-out |
+| `analytics` | Dashboard overview totals + funnel-over-time (staff) |
 | `onboarding` | Complete onboarding, consent, mark active |
 | `consent-documents` | Admin upload/activate consent PDFs |
 | `email-templates` | Admin email template CRUD |

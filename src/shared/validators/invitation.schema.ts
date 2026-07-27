@@ -74,12 +74,23 @@ function emptyToUndefined(value: string | undefined): string | undefined {
   return value;
 }
 
+/**
+ * Tenant id for list filters — accepts a UUID or a positive-integer string
+ * (Adhera Core ids are integers). Kept as a string to match the text column.
+ */
+const listTenantIdSchema = z
+  .union([
+    uuidSchema,
+    z.string().regex(/^\d+$/, "Must be a UUID or positive integer"),
+  ])
+  .optional();
+
 /** GET /api/v1/invitations */
 export const listInvitationsQuerySchema = z
   .object({
     status: z.enum(INVITATION_STATUSES).optional(),
-    program_id: uuidSchema.optional(),
-    client_id: uuidSchema.optional(),
+    program_id: listTenantIdSchema,
+    client_id: listTenantIdSchema,
     date_from: z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/, "Must be YYYY-MM-DD")
@@ -134,6 +145,13 @@ export type DropOutInvitationBodyPayload = z.infer<
 export const getInvitationAttentionReasonsParamsSchema = z.object({
   invitation_id: uuidSchema,
 }) satisfies z.ZodType<GetInvitationAttentionReasonsParams>;
+
+/** GET /api/v1/invitations/{invitation_id} */
+export const getInvitationParamsSchema = z.object({
+  invitation_id: uuidSchema,
+});
+
+export type GetInvitationParamsPayload = z.infer<typeof getInvitationParamsSchema>;
 
 export type GetInvitationAttentionReasonsParamsPayload = z.infer<
   typeof getInvitationAttentionReasonsParamsSchema

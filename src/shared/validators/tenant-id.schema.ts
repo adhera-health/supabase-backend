@@ -24,3 +24,12 @@ export const flexibleTenantIdSchema = z.union([
   positiveIntSchema,
   positiveIntStringSchema,
 ]) satisfies z.ZodType<TenantIdInput>;
+
+/**
+ * Stored tenant id as a string — the Adhera Core integer id (e.g. "36").
+ * Used where ids arrive already-stringified (patient app echoing them back,
+ * admin consent-document management).
+ */
+export const tenantIdStringSchema = z
+  .string()
+  .regex(/^\d+$/, "Must be a positive integer id");

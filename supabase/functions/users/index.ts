@@ -9,12 +9,18 @@
 
 import { requirePermission } from "@shared/auth/authorization.ts";
 import { PERMISSIONS } from "@shared/auth/permissions.ts";
+import {
+  extractBearerToken,
+  getAuthenticatedSupabaseUser,
+} from "@shared/auth/request-auth.ts";
 import { logAuditEvent } from "@shared/services/audit.service.ts";
 import {
   createDashboardUser,
   deleteDashboardUser,
+  getOwnProfile,
   listDashboardUsers,
   updateDashboardUserRole,
+  updateOwnProfile,
 } from "@shared/services/user.service.ts";
 import { BadRequestError } from "@shared/utils/errors.ts";
 import { createHonoApp } from "@shared/utils/hono.ts";
@@ -27,19 +33,50 @@ import {
   createUserSchema,
   deleteUserParamsSchema,
   parseSchema,
+  updateMyProfileBodySchema,
   updateUserRoleBodySchema,
   updateUserRoleParamsSchema,
 } from "@shared/validators/user.schema.ts";
 import type {
   CreateUserResponse,
   DeleteUserResponse,
+  GetMyProfileResponse,
   ListUsersResponse,
+  UpdateMyProfileResponse,
   UpdateUserRoleResponse,
 } from "@domain/user.ts";
 
 const FUNCTION_NAME = "users";
 
 const app = createHonoApp().basePath(`/${FUNCTION_NAME}`);
+
+async function handleGetMyProfile(c: Context) {
+  const token = extractBearerToken(c.req.header("Authorization"));
+  const actor = await getAuthenticatedSupabaseUser(token);
+
+  const result = await getOwnProfile(actor);
+  const response: GetMyProfileResponse = result;
+
+  return success(response);
+}
+
+async function handleUpdateMyProfile(c: Context) {
+  const token = extractBearerToken(c.req.header("Authorization"));
+  const actor = await getAuthenticatedSupabaseUser(token);
+
+  let body: unknown;
+  try {
+    body = await c.req.json();
+  } catch {
+    throw new BadRequestError("Invalid JSON body");
+  }
+
+  const input = parseSchema(updateMyProfileBodySchema, body);
+  const result = await updateOwnProfile(actor, input);
+  const response: UpdateMyProfileResponse = result;
+
+  return success(response);
+}
 
 async function handleListUsers(c: Context) {
   const logger = createLogger(FUNCTION_NAME);
@@ -199,7 +236,9 @@ async function handleDeleteUser(c: Context) {
 }
 
 app.get("/", handleListUsers);
+app.get("/me", handleGetMyProfile);
 app.post("/create", handleCreateUser);
+app.patch("/me", handleUpdateMyProfile);
 app.patch("/:auth_user_id/role", handleUpdateUserRole);
 app.delete("/:auth_user_id", handleDeleteUser);
 

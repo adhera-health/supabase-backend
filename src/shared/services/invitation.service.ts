@@ -21,6 +21,7 @@ import {
   updateInvitationLatestToken,
 } from "@shared/database/queries/invitations.query.ts";
 import { resendInvitationTokenTransactionally } from "@shared/database/queries/transactional-db-rpc.query.ts";
+import { getUserConsentByInvitationId } from "@shared/database/queries/consent.query.ts";
 import {
   listActiveAttentionFlagsByInvitationId,
   listActiveAttentionFlagsByInvitationIds,
@@ -42,6 +43,7 @@ import { BadRequestError, ConflictError, NotFoundError } from "@shared/utils/err
 import type {
   DropOutInvitationResponse,
   DropOutReasonType,
+  GetInvitationResponse,
   InvitationDropoutFailureStage,
   InvitationStatus,
   ListInvitationsResponse,
@@ -527,6 +529,43 @@ export async function getInvitationAttentionReasonsForAdmin(
   return {
     invitation_uuid: invitation.uuid,
     attention_flags,
+  };
+}
+
+export async function getInvitationDetailForAdmin(
+  invitationUuid: string,
+  actor: AuthenticatedUser,
+): Promise<GetInvitationResponse> {
+  const invitation = await getInvitationForAdminAction(invitationUuid, actor);
+  const attention_flags = await listActiveAttentionFlagsByInvitationId(invitation.id);
+  const userConsent = await getUserConsentByInvitationId(invitation.id);
+
+  return {
+    invitation: {
+      invitation_uuid: invitation.uuid,
+      email: invitation.email,
+      client_id: invitation.client_id,
+      program_id: invitation.program_id,
+      status: invitation.status,
+      invited_at: invitation.invited_at,
+      email_opened_at: invitation.email_opened_at,
+      registered_at: invitation.registered_at,
+      consent_completed_at: invitation.consent_completed_at,
+      activated_at: invitation.activated_at,
+      dropped_out_at: invitation.dropped_out_at,
+      last_activity_at: invitation.last_activity_at,
+    },
+    attention_flags,
+    consent: userConsent
+      ? {
+        version: userConsent.consent_version,
+        accepted_at: userConsent.accepted_at,
+        ip_address: userConsent.ip_address,
+        user_agent: userConsent.user_agent,
+        withdrawn: userConsent.is_withdrawn,
+        withdrawn_at: userConsent.withdrawn_at,
+      }
+      : null,
   };
 }
 

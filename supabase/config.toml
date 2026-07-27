@@ -16,12 +16,11 @@ extra_search_path = ["public", "extensions"]
 # The maximum number of rows returns from a view, table, or stored procedure. Limits payload size
 # for accidental or malicious requests.
 max_rows = 1000
-# Controls whether new tables, views, sequences and functions created in the `public` schema by
-# `postgres` are reachable through the Data API roles (`anon`, `authenticated`, `service_role`)
-# without explicit GRANTs. Leave unset today to preserve local behaviour. The implicit default
-# flips to `false` on 2026-05-30 to match the new cloud default, and the field is removed in
-# 2026-10-30 once the always-revoked behaviour is permanent. Set to `false` to opt in early.
-# auto_expose_new_tables = false
+# Keep the secure default (revoked): do NOT auto-expose public tables to anon/authenticated —
+# the anon key is public (shipped in the frontend) and there are no RLS policies, so auto-exposure
+# would make tables publicly readable. The backend uses the service role only; it is granted
+# explicitly in migration 20260710130000_grant_service_role_public.sql.
+auto_expose_new_tables = false
 
 [api.tls]
 # Enable HTTPS endpoints locally using a self-signed certificate.
@@ -233,15 +232,20 @@ otp_length = 6
 # Number of seconds before the email OTP expires (defaults to 1 hour).
 otp_expiry = 3600
 
-# Use a production-ready SMTP server
+# Password recovery / forgot-password (PRD §19, notes.txt):
+# - LOCAL: emails are captured by Inbucket (see [inbucket] below) at
+#   http://127.0.0.1:54324 — no SMTP needed to test the reset flow.
+# - PRODUCTION: configure a real SMTP server so recovery emails are delivered,
+#   and add the dashboard origin to `additional_redirect_urls` above so the
+#   reset link (`/reset-password`) is allowed.
 # [auth.email.smtp]
 # enabled = true
 # host = "smtp.sendgrid.net"
 # port = 587
 # user = "apikey"
 # pass = "env(SENDGRID_API_KEY)"
-# admin_email = "admin@email.com"
-# sender_name = "Admin"
+# admin_email = "no-reply@adhera.example"
+# sender_name = "Adhera"
 
 # Uncomment to customize email template
 # [auth.email.template.invite]

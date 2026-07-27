@@ -28,6 +28,7 @@ export interface DashboardUser {
   client_id: string | null;
   license_client_id: number | null;
   email: string;
+  name: string | null;
   role: DashboardStaffRole;
   status: DashboardUserStatus;
   created_by_auth_user_id: string | null;
@@ -39,9 +40,31 @@ export interface DashboardUser {
 export interface DashboardUserResource {
   auth_user_id: string;
   email: string;
+  name: string | null;
   role: DashboardStaffRole;
   created_at: string;
   updated_at: string;
+}
+
+/** GET /users/me — own profile. */
+export interface MyProfileResource {
+  auth_user_id: string;
+  email: string;
+  name: string | null;
+  role: DashboardStaffRole;
+}
+
+export interface GetMyProfileResponse {
+  profile: MyProfileResource;
+}
+
+/** PATCH /users/me — request body */
+export interface UpdateMyProfileInput {
+  name: string;
+}
+
+export interface UpdateMyProfileResponse {
+  profile: MyProfileResource;
 }
 
 /** GET /users — response body */

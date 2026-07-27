@@ -8,6 +8,7 @@ import type { CompleteOnboardingInput } from "@domain/onboarding.ts";
 import type { MarkInvitationActiveQuery } from "@domain/client-program-query.ts";
 import { parseSchema } from "@shared/validators/parse-schema.ts";
 import { patientPasswordSchema } from "@shared/validators/password.schema.ts";
+import { tenantIdStringSchema } from "@shared/validators/tenant-id.schema.ts";
 
 const invitationTokenSchema = z.string().min(32, "Token is required");
 
@@ -27,8 +28,8 @@ export type CompleteOnboardingPayload = z.infer<typeof completeOnboardingSchema>
 
 /** POST /onboarding/mark-active — client/program from query (patient JWT). */
 export const markInvitationActiveQuerySchema = z.object({
-  client_id: z.string().uuid("Must be a valid UUID"),
-  program_id: z.string().uuid("Must be a valid UUID"),
+  client_id: tenantIdStringSchema,
+  program_id: tenantIdStringSchema,
 }) satisfies z.ZodType<MarkInvitationActiveQuery>;
 
 export type MarkInvitationActiveQueryPayload = z.infer<

@@ -122,3 +122,27 @@ export interface ReminderRunSummary {
 export interface RunRemindersResponse {
   run: ReminderRunSummary;
 }
+
+/** GET /reminders/logs — one reminder history row (joined to member). */
+export interface ReminderLogResource {
+  invitation_uuid: string;
+  email: string;
+  reminder_type: ReminderDeliveryType;
+  schedule_slot: ReminderScheduleSlot;
+  status: ReminderLogStatus;
+  scheduled_for: string;
+  sent_at: string | null;
+  error_message: string | null;
+  created_at: string;
+}
+
+/** GET /reminders/logs — response body */
+export interface ListReminderLogsResponse {
+  logs: ReminderLogResource[];
+  pagination: {
+    page: number;
+    per_page: number;
+    total: number;
+    total_pages: number;
+  };
+}
