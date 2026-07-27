@@ -1,13 +1,6 @@
 /**
- * License Service domain types — create result used at complete-onboarding.
+ * License reservation domain types.
  */
-
-export const LICENSE_SOURCES = ["license_service", "dev_stub"] as const;
-export type LicenseSource = (typeof LICENSE_SOURCES)[number];
-
-/** Default License Service role for patients (not staff dashboard roles). */
-export const DEFAULT_PATIENT_LICENSE_ROLE = "app_member";
-
 
 /**
  * Create License Reservation

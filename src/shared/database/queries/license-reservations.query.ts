@@ -14,9 +14,7 @@ import type {
 
 export async function createLicenseReservationRow(
   input: CreateLicenseReservationInput,
-): Promise<LicenseReservation> 
-{
-
+): Promise<LicenseReservation> {
   const db = getServiceClient();
   const { data, error } = await db
     .from("license_reservations")
@@ -31,31 +29,34 @@ export async function createLicenseReservationRow(
     .select()
     .maybeSingle();
 
-    if (error) {
-      raiseDbError("Failed to create or fetch license reservation", error);
-    }
-    
-    if (!data) {
-      throw new NotFoundError("License reservation could not be created or was not found");
-    }
+  if (error) {
+    raiseDbError("Failed to create or fetch license reservation", error);
+  }
+
+  if (!data) {
+    throw new NotFoundError("License reservation could not be created or was not found");
+  }
 
   return data as LicenseReservation;
 }
 
 export async function getLicenseReservationByEmailRow(
   input: GetLicenseReservationByEmailInput,
-): Promise<LicenseReservation> 
-{
+): Promise<LicenseReservation> {
   const db = getServiceClient();
   const { data, error } = await db
     .from("license_reservations")
     .select()
     .eq("user_email", input.user_email)
-    .single();
+    .maybeSingle();
 
-    if (error) {
-      raiseDbError("Failed to fetch license reservation", error);
-    }
+  if (error) {
+    raiseDbError("Failed to fetch license reservation", error);
+  }
+
+  if (!data) {
+    throw new NotFoundError("License reservation not found");
+  }
 
   return data as LicenseReservation;
 }

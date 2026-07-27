@@ -15,7 +15,6 @@ import { createLogger } from "@shared/utils/logger.ts";
 import { getClientIp } from "@shared/utils/request.ts";
 import { success } from "@shared/utils/response.ts";
 import {
-    emptyToUndefined,
     createLicenseReservationSchema,
     getLicenseReservationByEmailSchema,
 } from "@shared/validators/license-reservation.schema.ts";

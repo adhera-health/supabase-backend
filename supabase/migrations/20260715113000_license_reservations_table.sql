@@ -17,8 +17,6 @@ CREATE TABLE license_reservations (
 COMMENT ON TABLE license_reservations IS
   'Relations between license codes and the user emails that they are reserved for.';
 
+-- user_email is already indexed by the UNIQUE (user_email) constraint above.
 CREATE INDEX idx_license_reservations_license_code
   ON license_reservations (license_code);
-
-CREATE INDEX idx_license_reservations_user_email
-  ON license_reservations (user_email);

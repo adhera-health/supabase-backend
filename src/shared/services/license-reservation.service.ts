@@ -2,36 +2,21 @@
  * License reservations.
  */
 
-import { AppError } from "@shared/utils/errors.ts";
-import { createLogger } from "@shared/utils/logger.ts";
-import { 
+import {
   createLicenseReservationRow,
-  getLicenseReservationByEmailRow
-} from "../database/queries/license-reservations.query.ts";
+  getLicenseReservationByEmailRow,
+} from "@shared/database/queries/license-reservations.query.ts";
 import type {
   CreateLicenseReservationInput,
   CreateLicenseReservationResult,
   GetLicenseReservationByEmailInput,
   GetLicenseReservationByEmailResult,
-  LicenseReservation,
 } from "@domain/license-reservation.ts";
 
-const logger = createLogger("license-reservation");
-
-const TOKEN_TTL_HOURS = 72;
-
 export async function createLicenseReservation(
-  input: CreateLicenseReservationInput
-): Promise<CreateLicenseReservationResult> 
-{
-  const dbInput: CreateLicenseReservationInput = {
-    user_email: input.user_email,
-    license_code: input.license_code,
-  };
-
-  const license_reservation = await createLicenseReservationRow({
-    ...dbInput
-  });
+  input: CreateLicenseReservationInput,
+): Promise<CreateLicenseReservationResult> {
+  const license_reservation = await createLicenseReservationRow(input);
 
   return {
     success: true,
@@ -43,16 +28,9 @@ export async function createLicenseReservation(
 }
 
 export async function getLicenseReservationByEmail(
-  input: GetLicenseReservationByEmailInput
-): Promise<GetLicenseReservationByEmailResult> 
-{
-  const dbInput: GetLicenseReservationByEmailInput = {
-    user_email: input.user_email
-  };
-
-  const license_reservation = await getLicenseReservationByEmailRow({
-    ...dbInput
-  });
+  input: GetLicenseReservationByEmailInput,
+): Promise<GetLicenseReservationByEmailResult> {
+  const license_reservation = await getLicenseReservationByEmailRow(input);
 
   return {
     success: true,

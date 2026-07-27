@@ -1,10 +1,8 @@
 /**
- * License reservation validators — Feature 1: Send invitation
- * Spec: onboarding-doc §6.1
+ * License reservation validators.
  */
 
 import { z } from "zod";
-import { parseSchema } from "@shared/validators/parse-schema.ts";
 import type {
   CreateLicenseReservationInput,
   GetLicenseReservationByEmailInput,
@@ -16,7 +14,7 @@ const emailSchema = z
   .email("Must be a valid email address")
   .transform((value: string) => value.toLowerCase());
 
-/** POST /api/v1/license-reservation */
+/** POST /license-reservation */
 export const createLicenseReservationSchema = z.object({
   user_email: emailSchema,
   license_code: z.string().trim().min(1, "License code is required")
@@ -24,7 +22,7 @@ export const createLicenseReservationSchema = z.object({
 
 export type CreateLicenseReservationPayload = z.infer<typeof createLicenseReservationSchema>;
 
-/** GET /license-reservation-by-email/ */
+/** POST /license-reservation/get-by-email */
 export const getLicenseReservationByEmailSchema = z.object({
   user_email: emailSchema
 }) satisfies z.ZodType<GetLicenseReservationByEmailInput>;
@@ -32,10 +30,3 @@ export const getLicenseReservationByEmailSchema = z.object({
 export type GetLicenseReservationByEmailPayload = z.infer<
   typeof getLicenseReservationByEmailSchema
 >;
-
-function emptyToUndefined(value: string | undefined): string | undefined {
-  if (value === undefined || value === "") return undefined;
-  return value;
-}
-
-export { emptyToUndefined, parseSchema };
