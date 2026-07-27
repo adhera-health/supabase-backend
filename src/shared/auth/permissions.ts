@@ -38,6 +38,9 @@ export const PERMISSIONS = {
   CONSENTS_ACCEPT: "consents.accept",
   CONSENTS_WITHDRAW: "consents.withdraw",
   ONBOARDING_MARK_ACTIVE: "onboarding.mark_active",
+
+  // License reservations
+  LICENSE_RESERVATIONS_CREATE: "license_reservations.create",
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
@@ -59,6 +62,7 @@ const RECRUITER_PERMISSIONS: readonly Permission[] = [
   PERMISSIONS.EMAIL_TEMPLATES_MANAGE,
   PERMISSIONS.DASHBOARD_ANALYTICS_VIEW,
   PERMISSIONS.AUDIT_LOGS_VIEW,
+  PERMISSIONS.LICENSE_RESERVATIONS_CREATE,
 ];
 
 // manager — staff user management ONLY (DEC-1): may view staff and create
