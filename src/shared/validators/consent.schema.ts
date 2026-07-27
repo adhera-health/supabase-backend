@@ -10,8 +10,8 @@ import type {
 } from "@domain/consent.ts";
 import type { LatestConsentQuery as GetLatestConsentQuery } from "@domain/client-program-query.ts";
 import { parseSchema } from "@shared/validators/parse-schema.ts";
+import { tenantIdStringSchema } from "@shared/validators/tenant-id.schema.ts";
 
-const uuidSchema = z.string().uuid("Must be a valid UUID");
 const documentHashSchema = z
   .string()
   .regex(/^[a-f0-9]{64}$/, "document_hash must be a 64-character SHA-256 hex string");
@@ -23,8 +23,8 @@ const literalTrue = (field: string) =>
 
 /** GET /api/v1/consents/latest */
 export const getLatestConsentQuerySchema = z.object({
-  program_id: uuidSchema,
-  client_id: uuidSchema,
+  program_id: tenantIdStringSchema,
+  client_id: tenantIdStringSchema,
 }) satisfies z.ZodType<GetLatestConsentQuery>;
 
 export type GetLatestConsentQueryPayload = z.infer<

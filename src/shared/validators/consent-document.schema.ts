@@ -5,8 +5,8 @@
 import type { UploadConsentDocumentInput } from "@domain/consent.ts";
 import { z } from "zod";
 import { parseSchema } from "@shared/validators/parse-schema.ts";
+import { tenantIdStringSchema } from "@shared/validators/tenant-id.schema.ts";
 
-const uuidSchema = z.string().uuid("Must be a valid UUID");
 const documentHashSchema = z
   .string()
   .regex(/^[a-f0-9]{64}$/, "document_hash must be a 64-character SHA-256 hex string");
@@ -24,8 +24,8 @@ const summaryBulletsSchema = z
 
 /** POST /consent-documents/upload — JSON metadata (file uploaded separately as base64) */
 export const uploadConsentDocumentSchema = z.object({
-  client_id: uuidSchema,
-  program_id: uuidSchema,
+  client_id: tenantIdStringSchema,
+  program_id: tenantIdStringSchema,
   version: z.string().trim().min(1, "version is required").max(50),
   privacy_notice_url: z
     .string()
