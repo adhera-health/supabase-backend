@@ -16,7 +16,7 @@ import {
   getLatestAssignmentByUserId,
 } from "@shared/database/queries/onboarding.query.ts";
 import { NotFoundError, BadRequestError } from "@shared/utils/errors.ts";
-import { isProductionEnvironment } from "@shared/utils/cors.ts";
+import { isProductionEnvironment } from "@shared/utils/environment.ts";
 import { verifyOptOutToken } from "@shared/utils/opt-out-token.ts";
 import type { PatientInvitation } from "@domain/invitation.ts";
 import type {

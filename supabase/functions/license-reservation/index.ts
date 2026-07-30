@@ -1,7 +1,5 @@
-import { 
-    requirePermission,
-    assertLicenseReservationSecret 
-} from "@shared/auth/authorization.ts";
+import { requirePermission } from "@shared/auth/authorization.ts";
+import { assertLicenseReservationSecret } from "@shared/auth/license-reservation-auth.ts";
 import { PERMISSIONS } from "@shared/auth/permissions.ts";
 import { logAuditEvent } from "@shared/services/audit.service.ts";
 import {
@@ -12,6 +10,7 @@ import { BadRequestError } from "@shared/utils/errors.ts";
 import { createHonoApp } from "@shared/utils/hono.ts";
 import type { Context } from "hono";
 import { createLogger } from "@shared/utils/logger.ts";
+import { assertLicenseReservationLookupRateLimit } from "@shared/utils/rate-limit-presets.ts";
 import { getClientIp } from "@shared/utils/request.ts";
 import { success } from "@shared/utils/response.ts";
 import {
@@ -76,10 +75,12 @@ async function handleCreateLicenseReservation(c: Context)
  */
 async function handleGetLicenseReservationByEmail(c: Context) 
 {
-    assertLicenseReservationSecret(c);
-    
+    await assertLicenseReservationSecret(c);
+
     const logger = createLogger("license-reservation");
     const actorIp = getClientIp(c) ?? "unknown";
+
+    assertLicenseReservationLookupRateLimit(actorIp);
 
     const input = parseSchema(getLicenseReservationByEmailSchema, await parseJsonBody(c));
 

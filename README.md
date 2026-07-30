@@ -71,7 +71,9 @@ See [`.env.example`](./.env.example) for the full list with comments.
 | `SUPABASE_URL` | Local: `http://127.0.0.1:54321` |
 | `SUPABASE_ANON_KEY` | From `supabase start` |
 | `SUPABASE_SERVICE_ROLE_KEY` | From `supabase start` |
-| `ENVIRONMENT` | `development` locally |
+| `ENVIRONMENT` | `development` locally. Must be one of `development` \| `test` \| `staging` \| `production` — **anything else (including unset) resolves to `production`** so security controls fail closed. |
+| `REMINDER_CRON_SECRET` | Required in **every** environment — guards `POST /reminders/run` (batch patient email send). |
+| `LICENSE_RESERVATION_SECRET` | Required in **every** environment — guards `POST /license-reservation/get-by-email` (returns PII by email, runs with `verify_jwt = false`). |
 
 **Optional local dev:**
 
@@ -83,7 +85,9 @@ See [`.env.example`](./.env.example) for the full list with comments.
 
 **E2E / local invitations:** When using `DEV_ADMIN_CLIENT_ID` + `DEV_ADMIN_PROGRAM_ID`, license snapshot defaults to integers `1`/`1` and `https://dev-stub.local` unless `DEV_ADMIN_LICENSE_*` and `LICENSE_CORE_API_HOST` are set. Onboarding then uses `dev_stub` license when Auth0 env is unset.
 
-**Production-only:** `ALLOWED_CORS_ORIGINS`, `REMINDER_CRON_SECRET`, `RESEND_API_KEY`, `INVITATION_FROM_EMAIL` — see `.env.example`.
+**Production-only:** `ALLOWED_CORS_ORIGINS`, `RESEND_API_KEY`, `INVITATION_FROM_EMAIL` — see `.env.example`.
+
+> **Secret-guarded routes fail closed.** `POST /reminders/run` and `POST /license-reservation/get-by-email` return **500** when their secret is unset, in every environment — they are never silently open. Previously a missing secret meant "allow" outside production, which left both routes unauthenticated in dev and staging. If either returns 500, the secret is missing, not the code broken.
 
 ## Admin login (local)
 

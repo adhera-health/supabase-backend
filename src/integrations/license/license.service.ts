@@ -10,6 +10,7 @@ import {
   type CreatePatientLicenseInput,
   type CreatedLicense,
 } from "@domain/license.ts";
+import { isProductionEnvironment } from "@shared/utils/environment.ts";
 import { AppError } from "@shared/utils/errors.ts";
 import { createLogger } from "@shared/utils/logger.ts";
 
@@ -38,7 +39,7 @@ export async function createPatientLicense(
   input: CreatePatientLicenseInput,
 ): Promise<CreatedLicense> {
   const role = input.role?.trim() || DEFAULT_PATIENT_LICENSE_ROLE;
-  const isProduction = Deno.env.get("ENVIRONMENT") === "production";
+  const isProduction = isProductionEnvironment();
 
   if (!isLicenseServiceConfigured()) {
     if (isProduction) {

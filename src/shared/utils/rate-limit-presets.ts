@@ -140,6 +140,22 @@ export function assertCompleteOnboardingRateLimit(clientIp: string): void {
   });
 }
 
+/**
+ * License reservation lookup by email — per client IP (SEC-12).
+ * Machine-to-machine route returning PII keyed on email, so the cap is deliberately
+ * low: it exists to blunt enumeration, not to serve interactive traffic.
+ */
+export function assertLicenseReservationLookupRateLimit(clientIp: string): void {
+  assertRateLimit({
+    key: `license-reservation-lookup:${clientIp}`,
+    max: parsePositiveInt(Deno.env.get("RATE_LIMIT_LICENSE_LOOKUP_MAX"), 20),
+    windowMs: parsePositiveInt(
+      Deno.env.get("RATE_LIMIT_LICENSE_LOOKUP_WINDOW_MS"),
+      60_000,
+    ),
+  });
+}
+
 /** Public communication opt-out — per client IP. */
 export function assertOptOutRateLimit(clientIp: string): void {
   assertRateLimit({

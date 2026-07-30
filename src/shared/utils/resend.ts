@@ -2,6 +2,7 @@
  * Shared Resend email transport helpers.
  */
 
+import { isProductionEnvironment } from "@shared/utils/environment.ts";
 import { AppError } from "@shared/utils/errors.ts";
 
 const DEV_PATIENT_APP_BASE_URL = "http://localhost:3000";
@@ -11,7 +12,7 @@ export function isResendConfigured(): boolean {
   const apiKey = Deno.env.get("RESEND_API_KEY")?.trim();
   if (!apiKey) return false;
 
-  const isProduction = Deno.env.get("ENVIRONMENT") === "production";
+  const isProduction = isProductionEnvironment();
   if (isProduction) return true;
 
   return Deno.env.get("ENABLE_RESEND_IN_DEV") === "true";
@@ -34,7 +35,7 @@ export function getPatientAppBaseUrl(): string {
     return configured.replace(/\/+$/, "");
   }
 
-  const isProduction = Deno.env.get("ENVIRONMENT") === "production";
+  const isProduction = isProductionEnvironment();
   if (isProduction) {
     throw new AppError("Missing required environment variable: PATIENT_APP_BASE_URL", {
       statusCode: 500,

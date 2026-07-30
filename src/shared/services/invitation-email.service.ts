@@ -5,6 +5,7 @@
 import { getActiveConsentDocument } from "@shared/database/queries/consent.query.ts";
 import { resolveInvitationEmailContent } from "@shared/services/email-template.service.ts";
 import type { InvitationEmailContentOverride } from "@domain/email-template.ts";
+import { isProductionEnvironment } from "@shared/utils/environment.ts";
 import { AppError } from "@shared/utils/errors.ts";
 import {
   findUnresolvedInvitationPlaceholders,
@@ -55,7 +56,7 @@ export async function sendInvitationEmail(
   const resolved = await resolveInvitationEmailContent(input.contentOverride);
 
   const resendConfigured = isResendConfigured();
-  const isProduction = Deno.env.get("ENVIRONMENT") === "production";
+  const isProduction = isProductionEnvironment();
 
   if (!resendConfigured) {
     if (isProduction) {
