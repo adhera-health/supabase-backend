@@ -15,23 +15,6 @@ export const REQUIRED_INVITATION_EMAIL_PLACEHOLDERS = [
 export type RequiredInvitationEmailPlaceholder =
   (typeof REQUIRED_INVITATION_EMAIL_PLACEHOLDERS)[number];
 
-const UNSAFE_HTML_RULES: ReadonlyArray<{ message: string; pattern: RegExp }> = [
-  { message: "HTML must not contain script tags", pattern: /<script\b/i },
-  { message: "HTML must not contain javascript: URLs", pattern: /javascript\s*:/i },
-  { message: "HTML must not contain vbscript: URLs", pattern: /vbscript\s*:/i },
-  { message: "HTML must not contain inline event handlers", pattern: /\bon[a-z]+\s*=/i },
-  { message: "HTML must not contain iframe elements", pattern: /<iframe\b/i },
-  { message: "HTML must not contain object elements", pattern: /<object\b/i },
-  { message: "HTML must not contain embed elements", pattern: /<embed\b/i },
-];
-
-/** Returns human-readable unsafe HTML violations (empty when safe). */
-export function collectUnsafeEmailHtmlIssues(html: string): string[] {
-  return UNSAFE_HTML_RULES
-    .filter((rule) => rule.pattern.test(html))
-    .map((rule) => rule.message);
-}
-
 /** Returns missing required placeholder tokens e.g. "{{onboarding_url}}". */
 export function findMissingRequiredInvitationPlaceholders(
   content: string,
@@ -62,12 +45,16 @@ export function assertInvitationEmailHtmlBodyValid(
   const fieldPath = options?.fieldPath ?? "html_body";
   const fieldErrors: Record<string, string[]> = {};
 
-  const unsafeIssues = collectUnsafeEmailHtmlIssues(htmlBody);
-  if (unsafeIssues.length > 0) {
-    fieldErrors[fieldPath] = unsafeIssues;
+  const sanitizedHtmlBody = sanitizeInvitationEmailHtmlBody(htmlBody);
+
+  if (sanitizedHtmlBody !== htmlBody) {
+      fieldErrors[fieldPath] = [
+        "HTML contains disallowed markup or attributes.",
+      ];
   }
 
-  const missingPlaceholders = findMissingRequiredInvitationPlaceholders(htmlBody);
+  const missingPlaceholders = findMissingRequiredInvitationPlaceholders(sanitizedHtmlBody);
+  
   if (missingPlaceholders.length > 0) {
     const placeholderMessage =
       `HTML must include required placeholders: ${missingPlaceholders.join(", ")}`;
@@ -77,4 +64,133 @@ export function assertInvitationEmailHtmlBodyValid(
   if (Object.keys(fieldErrors).length > 0) {
     throw new ValidationError("Validation failed", { field_errors: fieldErrors });
   }
+}
+
+const ALLOWED_HTML_TAGS = new Set([
+  "a",
+  "p",
+  "br",
+  "strong",
+  "b",
+  "em",
+  "i",
+  "u",
+  "ul",
+  "ol",
+  "li",
+  "div",
+  "span",
+  "table",
+  "thead",
+  "tbody",
+  "tfoot",
+  "tr",
+  "td",
+  "th",
+  "blockquote",
+  "pre",
+  "code",
+  "small",
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+]);
+
+const ALLOWED_ATTRIBUTES: Record<string, readonly string[]> = {
+  a: ["href", "title", "target", "rel"],
+  img: ["src", "alt", "title", "width", "height"],
+  div: ["title"],
+  span: ["title"],
+  table: ["border", "cellpadding", "cellspacing"],
+  td: ["colspan", "rowspan"],
+  th: ["colspan", "rowspan"],
+};
+
+const PLACEHOLDER_PATTERN = /\{\{\s*[a-z_]+\s*\}\}/g;
+
+function isPlaceholderValue(value: string): boolean {
+  return PLACEHOLDER_PATTERN.test(value);
+}
+
+function isSafeUrl(value: string): boolean {
+  const normalized = value.trim().replace(/\s+/g, "");
+  if (!normalized) return false;
+  if (isPlaceholderValue(normalized)) return true;
+
+  return /^(https?:|mailto:|cid:)/i.test(normalized);
+}
+
+function sanitizeElement(el: Element): void {
+  for (const attr of Array.from(el.attributes)) {
+    const name = attr.name.toLowerCase();
+
+    if (name.startsWith("on")) {
+      el.removeAttribute(attr.name);
+      continue;
+    }
+
+    if (name === "style") {
+      el.removeAttribute(attr.name);
+      continue;
+    }
+
+    const allowedAttrs = ALLOWED_ATTRIBUTES[el.tagName.toLowerCase()] ?? [];
+    if (!allowedAttrs.includes(name)) {
+      el.removeAttribute(attr.name);
+      continue;
+    }
+
+    if ((name === "href" || name === "src") && !isSafeUrl(attr.value)) {
+      el.removeAttribute(attr.name);
+      continue;
+    }
+
+    if (el.tagName.toLowerCase() === "a" && name === "target") {
+      el.setAttribute("rel", "noreferrer noopener");
+    }
+  }
+}
+
+function sanitizeNode(node: Node): void {
+  if (node.nodeType === Node.ELEMENT_NODE) {
+    const el = node as Element;
+    const tag = el.tagName.toLowerCase();
+
+    if (!ALLOWED_HTML_TAGS.has(tag)) {
+      if (["script", "style", "iframe", "object", "embed", "svg", "math"].includes(tag)) {
+        el.remove();
+        return;
+      }
+
+      while (el.firstChild) {
+        el.parentNode?.insertBefore(el.firstChild, el);
+      }
+      el.remove();
+      return;
+    }
+
+    sanitizeElement(el);
+  }
+
+  for (const child of Array.from(node.childNodes)) {
+    sanitizeNode(child);
+  }
+}
+
+
+
+export function sanitizeInvitationEmailHtmlBody(htmlBody: string): string {
+  const parser = new DOMParser();
+  const document = parser.parseFromString(htmlBody, "text/html");
+
+  if (!document.body) {
+    return "";
+  }
+
+  sanitizeNode(document.body);
+
+  return document.body.innerHTML;
 }
