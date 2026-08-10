@@ -67,7 +67,7 @@ async function handleCompleteOnboarding(c: Context) {
   const logger = createLogger("onboarding");
   const actorIp = getClientIp(c) ?? "unknown";
 
-  assertCompleteOnboardingRateLimit(actorIp);
+  await assertCompleteOnboardingRateLimit(actorIp);
 
   const input = parseSchema(completeOnboardingSchema, await parseJsonBody(c));
 

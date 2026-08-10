@@ -129,7 +129,7 @@ async function handleListClients(c: Context) {
     c.req.header("Authorization"),
     PERMISSIONS.INVITATIONS_CLIENTS_LIST,
   );
-  assertAdminActionRateLimit(actor.id, "invitation_clients_list");
+  await assertAdminActionRateLimit(actor.id, "invitation_clients_list");
 
   logger.info("Listing active clients for invitation dropdown", {
     role: actor.role,
@@ -151,7 +151,7 @@ async function handleListClientPrograms(c: Context) {
     c.req.header("Authorization"),
     PERMISSIONS.INVITATIONS_CLIENTS_LIST,
   );
-  assertAdminActionRateLimit(actor.id, "invitation_client_programs_list");
+  await assertAdminActionRateLimit(actor.id, "invitation_client_programs_list");
 
   logger.info("Listing programs for invitation dropdown", {
     role: actor.role,
@@ -179,7 +179,7 @@ async function handleSendInvitation(c: Context) {
     c.req.header("Authorization"),
     PERMISSIONS.INVITATIONS_SEND,
   );
-  assertAdminActionRateLimit(actor.id, "invitation_send");
+  await assertAdminActionRateLimit(actor.id, "invitation_send");
   const adminScope = resolveAdminScope(actor);
   const invitedByUserId = actor.id;
   const actorIp = getClientIp(c);
@@ -251,7 +251,7 @@ async function handleValidateToken(c: Context) {
   const logger = createLogger("invitations");
   const actorIp = getClientIp(c) ?? "unknown";
 
-  assertValidateTokenRateLimit(actorIp);
+  await assertValidateTokenRateLimit(actorIp);
 
   const input = parseSchema(validateTokenQuerySchema, {
     token: c.req.query("token"),
@@ -301,7 +301,7 @@ async function handleResendInvitation(c: Context) {
     c.req.header("Authorization"),
     PERMISSIONS.INVITATIONS_RESEND,
   );
-  assertAdminActionRateLimit(actor.id, "invitation_resend");
+  await assertAdminActionRateLimit(actor.id, "invitation_resend");
   const actorIp = getClientIp(c);
 
   logger.info("Resending invitation", {
@@ -415,7 +415,7 @@ async function handleDropOutInvitation(c: Context) {
     c.req.header("Authorization"),
     PERMISSIONS.INVITATIONS_DROP_OUT,
   );
-  assertAdminActionRateLimit(actor.id, "invitation_drop_out");
+  await assertAdminActionRateLimit(actor.id, "invitation_drop_out");
   const recordedByUserId = actor.id;
   const actorIp = getClientIp(c);
 

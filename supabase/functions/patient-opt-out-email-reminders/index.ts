@@ -27,7 +27,7 @@ async function handleRecordEmailReminderOptOut(c: Context) {
   const logger = createLogger("patient-opt-out-email-reminders");
   const actorIp = getClientIp(c) ?? "unknown";
 
-  assertOptOutRateLimit(actorIp);
+  await assertOptOutRateLimit(actorIp);
 
   let body: unknown;
   try {
