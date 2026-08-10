@@ -1,6 +1,8 @@
 /**
- * In-memory fixed-window rate limiter for public edge routes.
- * Suitable for single-worker local dev and per-instance production limits.
+ * Postgres-backed fixed-window rate limiter for public edge routes.
+ * Shared across all edge function instances via the rate_limits table
+ * and the acquire_rate_limit_bucket RPC, so limits hold under horizontal
+ * scaling instead of resetting per instance.
  */
 
 import { RateLimitError } from "@shared/utils/errors.ts";
@@ -28,10 +30,9 @@ export async function assertRateLimit(options: RateLimitOptions): Promise<void> 
     parsePositiveInt(Deno.env.get("RATE_LIMIT_VALIDATE_TOKEN_MAX"), 60);
   
   const windowMs = options.windowMs ??
-    parsePositiveInt(Deno.env.get("RATE_LIMIT_VALIDATE_TOKEN_WINDOW_MS", 60_000), 60_000);
+    parsePositiveInt(Deno.env.get("RATE_LIMIT_VALIDATE_TOKEN_WINDOW_MS"), 60_000);
 
   const now = Date.now();
-  //const existing = buckets.get(options.key);
   const windowStart = getWindowStart(now, windowMs);
   
   const client = getServiceClient();
