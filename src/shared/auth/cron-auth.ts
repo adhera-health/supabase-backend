@@ -1,19 +1,20 @@
 /**
- * Cron / internal auth for scheduled reminder runs.
+ * Cron / internal auth for scheduled maintenance runs (reminders, rate limit
+ * cleanup, ...).
  */
 
 import { ForbiddenError, UnauthorizedError, AppError } from "@shared/utils/errors.ts";
 import type { Context } from "hono";
 
-const CRON_SECRET_HEADER = "x-reminder-cron-secret";
+const CRON_SECRET_HEADER = "x-cron-secret";
 
-export function assertReminderCronAuth(c: Context): void {
-  const configuredSecret = Deno.env.get("REMINDER_CRON_SECRET")?.trim();
+export function assertCronAuth(c: Context): void {
+  const configuredSecret = Deno.env.get("CRON_SECRET")?.trim();
   const isProduction = Deno.env.get("ENVIRONMENT") === "production";
 
   if (!configuredSecret) {
     if (isProduction) {
-      throw new AppError("REMINDER_CRON_SECRET is required in production", {
+      throw new AppError("CRON_SECRET is required in production", {
         statusCode: 500,
         code: "INTERNAL_ERROR",
       });
@@ -28,10 +29,10 @@ export function assertReminderCronAuth(c: Context): void {
     (bearer?.startsWith("Bearer ") ? bearer.slice("Bearer ".length).trim() : undefined);
 
   if (!providedSecret) {
-    throw new UnauthorizedError("Missing reminder cron credentials");
+    throw new UnauthorizedError("Missing cron credentials");
   }
 
   if (providedSecret !== configuredSecret) {
-    throw new ForbiddenError("Invalid reminder cron credentials");
+    throw new ForbiddenError("Invalid cron credentials");
   }
 }

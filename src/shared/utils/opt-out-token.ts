@@ -22,10 +22,10 @@ function base64UrlDecode(value: string): Uint8Array {
 
 async function getSigningKey(): Promise<CryptoKey> {
   const secret = Deno.env.get("OPT_OUT_TOKEN_SECRET")?.trim() ??
-    Deno.env.get("REMINDER_CRON_SECRET")?.trim();
+    Deno.env.get("CRON_SECRET")?.trim();
 
   if (!secret) {
-    throw new Error("OPT_OUT_TOKEN_SECRET or REMINDER_CRON_SECRET is required for opt-out tokens");
+    throw new Error("OPT_OUT_TOKEN_SECRET or CRON_SECRET is required for opt-out tokens");
   }
 
   return crypto.subtle.importKey(

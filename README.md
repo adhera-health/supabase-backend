@@ -41,13 +41,15 @@ Functions are available at:
 | `users` | Staff user management (admin) |
 | `reminders` | Cron: onboarding reminder emails |
 | `patient-opt-out-email-reminders` | Patient opt-out of reminders |
+| `rate-limits-cleanup` | Cron: purge stale rate_limits rows |
 
 ## Deno tasks
 
 ```bash
-deno task seed:admin      # Create/update local admin user
-deno task test:e2e        # Full patient flow smoke test (requires steps above)
-deno task run:reminders   # Run reminder job manually (dev)
+deno task seed:admin              # Create/update local admin user
+deno task test:e2e                # Full patient flow smoke test (requires steps above)
+deno task run:reminders           # Run reminder job manually (dev)
+deno task run:rate-limits-cleanup # Run rate_limits cleanup manually (dev)
 ```
 
 ## Tests
@@ -86,7 +88,7 @@ See [`.env.example`](./.env.example) for the full list with comments.
 
 **E2E / local invitations:** When using `DEV_ADMIN_CLIENT_ID` + `DEV_ADMIN_PROGRAM_ID`, license snapshot defaults to integers `1`/`1` and `https://dev-stub.local` unless `DEV_ADMIN_LICENSE_*` and `LICENSE_CORE_API_HOST` are set. Onboarding then uses `dev_stub` license when Auth0 env is unset.
 
-**Production-only:** `ALLOWED_CORS_ORIGINS`, `REMINDER_CRON_SECRET`, `RESEND_API_KEY`, `INVITATION_FROM_EMAIL` — see `.env.example`.
+**Production-only:** `ALLOWED_CORS_ORIGINS`, `CRON_SECRET`, `RESEND_API_KEY`, `INVITATION_FROM_EMAIL` — see `.env.example`.
 
 ## Admin login (local)
 
