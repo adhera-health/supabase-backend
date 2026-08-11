@@ -56,6 +56,9 @@ deno task run:reminders   # Run reminder job manually (dev)
 # Unit tests
 deno test --allow-env src/shared/auth/rbac.test.ts src/integrations/license/auth0.test.ts
 
+# Rate limiter integration tests (Postgres-backed; requires `supabase start`)
+deno test --env-file=.env --allow-env --allow-net src/shared/utils/rate-limit.test.ts
+
 # E2E (Supabase + functions serve must be running)
 deno task test:e2e
 ```
