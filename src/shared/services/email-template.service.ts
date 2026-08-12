@@ -17,7 +17,10 @@ import {
   ConflictError,
   NotFoundError,
 } from "@shared/utils/errors.ts";
-import { assertInvitationEmailHtmlBodyValid } from "@shared/utils/email-template-validation.ts";
+import {
+  assertInvitationEmailHtmlBodyValid,
+  sanitizeInvitationEmailHtmlBody,
+} from "@shared/utils/email-template-validation.ts";
 import type {
   CreateEmailTemplateInput,
   CreateEmailTemplateResponse,
@@ -31,7 +34,6 @@ import type {
   ResolvedInvitationEmailContent,
   UpdateEmailTemplateInput,
 } from "@domain/email-template.ts";
-import { sanitizeInvitationEmailHtmlBody } from "../utils/email-template-validation";
 
 function toEmailTemplateResource(row: EmailTemplateRow): EmailTemplateResource {
   return {

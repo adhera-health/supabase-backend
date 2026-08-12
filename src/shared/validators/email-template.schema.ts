@@ -13,8 +13,8 @@ import type {
 import { parseSchema } from "@shared/validators/parse-schema.ts";
 import {
   findMissingRequiredInvitationPlaceholders,
+  sanitizeInvitationEmailHtmlBody,
 } from "@shared/utils/email-template-validation.ts";
-import { sanitizeInvitationEmailHtmlBody } from "../utils/email-template-validation";
 
 const uuidSchema = z.string().uuid("Must be a valid UUID");
 

@@ -1,8 +1,10 @@
 /**
  * Backend validation for admin email templates and invitation send overrides.
- * Not a full browser sanitizer — blocks obvious unsafe HTML and missing required placeholders.
+ * Sanitizes HTML against an allowlist of tags/attributes/URL schemes and checks
+ * for required placeholders.
  */
 
+import sanitizeHtml from "sanitize-html";
 import { ValidationError } from "@shared/utils/errors.ts";
 
 /** Must appear in invitation html_body so send-time rendering can substitute values. */
@@ -66,7 +68,7 @@ export function assertInvitationEmailHtmlBodyValid(
   }
 }
 
-const ALLOWED_HTML_TAGS = new Set([
+const ALLOWED_HTML_TAGS = [
   "a",
   "p",
   "br",
@@ -97,11 +99,10 @@ const ALLOWED_HTML_TAGS = new Set([
   "h4",
   "h5",
   "h6",
-]);
+];
 
-const ALLOWED_ATTRIBUTES: Record<string, readonly string[]> = {
+const ALLOWED_ATTRIBUTES: Record<string, string[]> = {
   a: ["href", "title", "target", "rel"],
-  img: ["src", "alt", "title", "width", "height"],
   div: ["title"],
   span: ["title"],
   table: ["border", "cellpadding", "cellspacing"],
@@ -109,88 +110,36 @@ const ALLOWED_ATTRIBUTES: Record<string, readonly string[]> = {
   th: ["colspan", "rowspan"],
 };
 
-const PLACEHOLDER_PATTERN = /\{\{\s*[a-z_]+\s*\}\}/g;
+/** Tags dropped along with their entire text content — not just unwrapped. */
+const DISALLOWED_CONTENT_TAGS = [
+  "script",
+  "style",
+  "textarea",
+  "option",
+  "iframe",
+  "object",
+  "embed",
+  "svg",
+  "math",
+  "noscript",
+];
 
-function isPlaceholderValue(value: string): boolean {
-  return PLACEHOLDER_PATTERN.test(value);
-}
-
-function isSafeUrl(value: string): boolean {
-  const normalized = value.trim().replace(/\s+/g, "");
-  if (!normalized) return false;
-  if (isPlaceholderValue(normalized)) return true;
-
-  return /^(https?:|mailto:|cid:)/i.test(normalized);
-}
-
-function sanitizeElement(el: Element): void {
-  for (const attr of Array.from(el.attributes)) {
-    const name = attr.name.toLowerCase();
-
-    if (name.startsWith("on")) {
-      el.removeAttribute(attr.name);
-      continue;
-    }
-
-    if (name === "style") {
-      el.removeAttribute(attr.name);
-      continue;
-    }
-
-    const allowedAttrs = ALLOWED_ATTRIBUTES[el.tagName.toLowerCase()] ?? [];
-    if (!allowedAttrs.includes(name)) {
-      el.removeAttribute(attr.name);
-      continue;
-    }
-
-    if ((name === "href" || name === "src") && !isSafeUrl(attr.value)) {
-      el.removeAttribute(attr.name);
-      continue;
-    }
-
-    if (el.tagName.toLowerCase() === "a" && name === "target") {
-      el.setAttribute("rel", "noreferrer noopener");
-    }
-  }
-}
-
-function sanitizeNode(node: Node): void {
-  if (node.nodeType === Node.ELEMENT_NODE) {
-    const el = node as Element;
-    const tag = el.tagName.toLowerCase();
-
-    if (!ALLOWED_HTML_TAGS.has(tag)) {
-      if (["script", "style", "iframe", "object", "embed", "svg", "math"].includes(tag)) {
-        el.remove();
-        return;
+const SANITIZE_OPTIONS: sanitizeHtml.IOptions = {
+  allowedTags: ALLOWED_HTML_TAGS,
+  allowedAttributes: ALLOWED_ATTRIBUTES,
+  allowedSchemes: ["http", "https", "mailto", "cid"],
+  allowProtocolRelative: false,
+  nonTextTags: DISALLOWED_CONTENT_TAGS,
+  transformTags: {
+    a: (tagName: string, attribs: Record<string, string>) => {
+      if (attribs.target) {
+        attribs.rel = "noreferrer noopener";
       }
-
-      while (el.firstChild) {
-        el.parentNode?.insertBefore(el.firstChild, el);
-      }
-      el.remove();
-      return;
-    }
-
-    sanitizeElement(el);
-  }
-
-  for (const child of Array.from(node.childNodes)) {
-    sanitizeNode(child);
-  }
-}
-
-
+      return { tagName, attribs };
+    },
+  },
+};
 
 export function sanitizeInvitationEmailHtmlBody(htmlBody: string): string {
-  const parser = new DOMParser();
-  const document = parser.parseFromString(htmlBody, "text/html");
-
-  if (!document.body) {
-    return "";
-  }
-
-  sanitizeNode(document.body);
-
-  return document.body.innerHTML;
+  return sanitizeHtml(htmlBody, SANITIZE_OPTIONS);
 }
