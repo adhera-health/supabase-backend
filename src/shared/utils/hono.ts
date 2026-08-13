@@ -78,6 +78,27 @@ function applyCorrelationHeader(response: Response): void {
   }
 }
 
+function applySecurityHeaders(response: Response): void {
+  const headers = response.headers;
+
+  headers.set("X-Content-Type-Options", "nosniff");
+  headers.set("X-Frame-Options", "DENY");
+  headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
+  headers.set("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'");
+}
+
+function securityHeadersMiddleware(): MiddlewareHandler {
+  return async (c, next) => {
+    await next();
+
+    if (c.res) {
+      applySecurityHeaders(c.res);
+    }
+  };
+}
+
 /** Creates a Hono app with shared error handling and CORS. */
 export function createHonoApp(): Hono {
   const app = new Hono();
@@ -85,6 +106,7 @@ export function createHonoApp(): Hono {
   app.use("*", stripTrailingSlashMiddleware(app));
   app.use("*", correlationMiddleware());
   app.use("*", corsMiddleware());
+  app.use("*", securityHeadersMiddleware());
 
   app.options("*", (c) => buildCorsPreflightResponse(c.req.header("Origin")));
 
@@ -92,6 +114,7 @@ export function createHonoApp(): Hono {
     const response = errorResponse(error);
     applyCorsToResponse(response, c.req.header("Origin"));
     applyCorrelationHeader(response);
+    applySecurityHeaders(response);
     return response;
   });
 
