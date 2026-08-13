@@ -1,40 +1,14 @@
 {
   "version": "5",
   "specifiers": {
-    "jsr:@hono/hono@4.7.10": "4.7.10",
-    "jsr:@hono/hono@^4.7.10": "4.12.24",
-    "jsr:@std/assert@*": "1.0.19",
-    "jsr:@std/assert@^1.0.19": "1.0.19",
-    "jsr:@std/internal@^1.0.12": "1.0.14",
-    "jsr:@std/testing@*": "1.0.19",
-    "jsr:@std/testing@^1.0.19": "1.0.19",
+    "jsr:@hono/hono@^4.7.10": "4.13.1",
     "npm:@supabase/supabase-js@2.108.1": "2.108.1",
-    "npm:@types/sanitize-html@^2.16.1": "2.16.1",
-    "npm:sanitize-html@2.17.6": "2.17.6",
     "npm:sanitize-html@^2.17.6": "2.17.6",
     "npm:zod@3.24.4": "3.24.4"
   },
   "jsr": {
-    "@hono/hono@4.7.10": {
-      "integrity": "e59029e252af371abe43e8e4f9a115e38974c6bd5972022372bf89f763269cc7"
-    },
-    "@hono/hono@4.12.24": {
-      "integrity": "a74a40f06ae6704ddd0e8e576f6da9d34666c3e1e0f5412a2c1ff800ffd092f4"
-    },
-    "@std/assert@1.0.19": {
-      "integrity": "eaada96ee120cb980bc47e040f82814d786fe8162ecc53c91d8df60b8755991e",
-      "dependencies": [
-        "jsr:@std/internal"
-      ]
-    },
-    "@std/internal@1.0.14": {
-      "integrity": "291516b3d4c35024d6ffbc0a9df5bf4c64116e05b50012cf846710152d2ffdf7"
-    },
-    "@std/testing@1.0.19": {
-      "integrity": "f4236172365b216728dc3cc8b5e80a9f4c33083d1e4ede7613d5b25b4014898e",
-      "dependencies": [
-        "jsr:@std/assert@^1.0.19"
-      ]
+    "@hono/hono@4.13.1": {
+      "integrity": "36e130f7c3a07d2938d0960c3c726e71ff15becdf999512949bc69884b6afb65"
     }
   },
   "npm": {
@@ -50,8 +24,8 @@
         "tslib"
       ]
     },
-    "@supabase/phoenix@0.4.2": {
-      "integrity": "sha512-YSAGnmDAfuleFCVt3CeurQZAhxRfXWeZIIkwp7NhYzQ1UwW6ePSnzsFAiUm/mbCkfoCf70QQHKW/K6RKh52a4A=="
+    "@supabase/phoenix@0.4.5": {
+      "integrity": "sha512-aAn9H9ovVyeApKy11OWOrrOGq8DV68yWeH4ud2lN9fzn4aO8Zb5GLL9m1pUg9nLqIcT+ZDfAcsZe0E/nqdv2lw=="
     },
     "@supabase/postgrest-js@2.108.1": {
       "integrity": "sha512-9lj2MCPPMgSTaJ5y+amnhb3TWPtMFVlbDn2hmX/VV91xQU4j0AauwfMaBErHBJ+zzsSwjc0jLU+zLIZFLQzfig==",
@@ -83,73 +57,36 @@
         "@supabase/storage-js"
       ]
     },
-    "@types/sanitize-html@2.16.1": {
-      "integrity": "sha512-n9wjs8bCOTyN/ynwD8s/nTcTreIHB1vf31vhLMGqUPNHaweKC4/fAl4Dj+hUlCTKYgm4P3k83fmiFfzkZ6sgMA==",
-      "dependencies": [
-        "htmlparser2@10.1.0"
-      ]
-    },
     "dayjs@1.11.21": {
       "integrity": "sha512-98IT+HOahAisibz/yjKbzuOBwYcjJ7BCLPzARyHiyEBmRz4fatF+KPJszEHXsGYjUG234aH/cOjW1wwTbKUZlA=="
     },
     "deepmerge@4.3.1": {
       "integrity": "sha512-3sUqbMEc77XqpdNO7FRyRog+eW3ph+GYCbj+rK+uYyRMuwsVy0rMiVtPn+QJlKFvWP/1PYpapqYn0Me2knFn+A=="
     },
-    "dom-serializer@2.0.0": {
-      "integrity": "sha512-wIkAryiqt/nV5EQKqQpo3SToSOV9J0DnbJqwK7Wv/Trc92zIAYZ4FlMu+JPFW1DfGFt81ZTCGgDEabffXeLyJg==",
-      "dependencies": [
-        "domelementtype@2.3.0",
-        "domhandler@5.0.3",
-        "entities@4.5.0"
-      ]
-    },
     "dom-serializer@3.1.1": {
       "integrity": "sha512-4MEa38/QexBob6gFNwu+EGdWvhJ1OKuNwdYY3Y3NyeWDQfnGeDYQUDfIRzWu5B5gsv03so2Uxd28YC6zrsx3Lw==",
       "dependencies": [
-        "domelementtype@3.0.0",
-        "domhandler@6.0.1",
-        "entities@8.0.0"
+        "domelementtype",
+        "domhandler",
+        "entities"
       ]
-    },
-    "domelementtype@2.3.0": {
-      "integrity": "sha512-OLETBj6w0OsagBwdXnPdN0cnMfF9opN69co+7ZrbfPGrdpPVNBUj02spi6B1N7wChLQiPn4CSH/zJvXw56gmHw=="
     },
     "domelementtype@3.0.0": {
       "integrity": "sha512-umCQid3jKbDmVjx8jGaW7uUykm4DEUeyV21hPxNMo2nV955DhUThwqyOIDtreepP31hl84X7G5U9ZfsWvIB3Pg=="
     },
-    "domhandler@5.0.3": {
-      "integrity": "sha512-cgwlv/1iFQiFnU96XXgROh8xTeetsnJiDsTc7TYCLFd9+/WNkIqPTxiM/8pSd8VIrhXGTf1Ny1q1hquVqDJB5w==",
-      "dependencies": [
-        "domelementtype@2.3.0"
-      ]
-    },
     "domhandler@6.0.1": {
       "integrity": "sha512-gYzvtM72ZtxQO0T048kd6HWSbbGCNOUwcnfQ01cqIJ4X2IYKFFHZ5mKvrQETcFXxsRObZulDaKmy//R7TPtsBg==",
       "dependencies": [
-        "domelementtype@3.0.0"
-      ]
-    },
-    "domutils@3.2.2": {
-      "integrity": "sha512-6kZKyUajlDuqlHKVX1w7gyslj9MPIXzIFiz/rGu35uC1wMi+kMhQwGhl4lt9unC9Vb9INnY9Z3/ZA3+FhASLaw==",
-      "dependencies": [
-        "dom-serializer@2.0.0",
-        "domelementtype@2.3.0",
-        "domhandler@5.0.3"
+        "domelementtype"
       ]
     },
     "domutils@4.0.2": {
       "integrity": "sha512-qI4JLRKnSzqFqr7hAlS5xQDusBCjKSEG4t4+7aNrIQMHBcsC2TGEhuyABJdYkgSewL57PNLYEiibY2iPKhKpaA==",
       "dependencies": [
-        "dom-serializer@3.1.1",
-        "domelementtype@3.0.0",
-        "domhandler@6.0.1"
+        "dom-serializer",
+        "domelementtype",
+        "domhandler"
       ]
-    },
-    "entities@4.5.0": {
-      "integrity": "sha512-V0hjH4dGPh9Ao5p0MoRY6BVqtwCjhz6vI5LT8AJ55H+4g9/4vbHx1I54fS0XuclLhDHArPQCiMjDxjaL8fPxhw=="
-    },
-    "entities@7.0.1": {
-      "integrity": "sha512-TWrgLOFUQTH994YUyl1yT4uyavY5nNB5muff+RtWaqNVCAK408b5ZnnbNAUEWLTCpum9w6arT70i1XdQ4UeOPA=="
     },
     "entities@8.0.0": {
       "integrity": "sha512-zwfzJecQ/Uej6tusMqwAqU/6KL2XaB2VZ2Jg54Je6ahNBGNH6Ek6g3jjNCF0fG9EWQKGZNddNjU5F1ZQn/sBnA=="
@@ -157,22 +94,13 @@
     "escape-string-regexp@4.0.0": {
       "integrity": "sha512-TtpcNJ3XAzx3Gq8sWRzJaVajRs0uVxA2YAkdb1jm2YkPz4G6egUFAyA3n5vtEIZefPk5Wa4UXbKuS5fKkJWdgA=="
     },
-    "htmlparser2@10.1.0": {
-      "integrity": "sha512-VTZkM9GWRAtEpveh7MSF6SjjrpNVNNVJfFup7xTY3UpFtm67foy9HDVXneLtFVt4pMz5kZtgNcvCniNFb1hlEQ==",
-      "dependencies": [
-        "domelementtype@2.3.0",
-        "domhandler@5.0.3",
-        "domutils@3.2.2",
-        "entities@7.0.1"
-      ]
-    },
     "htmlparser2@12.0.0": {
       "integrity": "sha512-Tz7u1i95/g2x2jz81+x0FBVhBhY5aRTvD3tXXdFaljuNdzDLJ8UGNRrTcj2cgQvAg3iW/h77Fz15nLW0L0CrZw==",
       "dependencies": [
-        "domelementtype@3.0.0",
-        "domhandler@6.0.1",
-        "domutils@4.0.2",
-        "entities@8.0.0"
+        "domelementtype",
+        "domhandler",
+        "domutils",
+        "entities"
       ]
     },
     "iceberg-js@0.8.1": {
@@ -210,7 +138,7 @@
       "dependencies": [
         "deepmerge",
         "escape-string-regexp",
-        "htmlparser2@12.0.0",
+        "htmlparser2",
         "is-plain-object",
         "launder",
         "parse-srcset",
@@ -230,8 +158,6 @@
   "workspace": {
     "dependencies": [
       "jsr:@hono/hono@^4.7.10",
-      "jsr:@std/assert@^1.0.19",
-      "jsr:@std/testing@^1.0.19",
       "npm:@supabase/supabase-js@2.108.1",
       "npm:@types/sanitize-html@^2.16.1",
       "npm:sanitize-html@^2.17.6",
