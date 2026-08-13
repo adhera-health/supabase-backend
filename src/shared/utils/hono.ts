@@ -87,18 +87,7 @@ function applySecurityHeaders(response: Response): void {
   headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
   headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
 
-  headers.set(
-    "Content-Security-Policy",
-    [
-      "default-src 'none'",
-      "connect-src 'self'",
-      "img-src 'self' data:",
-      "style-src 'self' 'unsafe-inline'",
-      "script-src 'self'",
-      "frame-ancestors 'none'",
-      "base-uri 'self'",
-    ].join("; "),
-  );
+  headers.set("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'");
 }
 
 function securityHeadersMiddleware(): MiddlewareHandler {
