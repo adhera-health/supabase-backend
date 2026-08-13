@@ -1,21 +1,21 @@
 /**
- * In-memory fixed-window rate limiter for public edge routes.
- * Suitable for single-worker local dev and per-instance production limits.
+ * Postgres-backed fixed-window rate limiter for public edge routes.
+ * Shared across all edge function instances via the rate_limits table
+ * and the acquire_rate_limit_bucket RPC, so limits hold under horizontal
+ * scaling instead of resetting per instance.
  */
 
 import { RateLimitError } from "@shared/utils/errors.ts";
-
-interface Bucket {
-  count: number;
-  resetAt: number;
-}
-
-const buckets = new Map<string, Bucket>();
+import { getServiceClient } from "@shared/database/client.ts";
 
 function parsePositiveInt(value: string | undefined, fallback: number): number {
   if (!value) return fallback;
   const parsed = Number.parseInt(value, 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function getWindowStart(now: number, windowMs: number): number {
+  return Math.floor(now / windowMs) * windowMs;
 }
 
 export interface RateLimitOptions {
@@ -25,28 +25,29 @@ export interface RateLimitOptions {
 }
 
 /** Throws RateLimitError when the key exceeds its configured window budget. */
-export function assertRateLimit(options: RateLimitOptions): void {
+export async function assertRateLimit(options: RateLimitOptions): Promise<void> {
   const max = options.max ??
     parsePositiveInt(Deno.env.get("RATE_LIMIT_VALIDATE_TOKEN_MAX"), 60);
+  
   const windowMs = options.windowMs ??
     parsePositiveInt(Deno.env.get("RATE_LIMIT_VALIDATE_TOKEN_WINDOW_MS"), 60_000);
 
   const now = Date.now();
-  const existing = buckets.get(options.key);
+  const windowStart = getWindowStart(now, windowMs);
+  
+  const client = getServiceClient();
+  const { data, error } = await client.rpc("acquire_rate_limit_bucket", {
+    p_key: options.key,
+    p_window_start: windowStart,
+    p_max: max,
+  });
 
-  if (!existing || now >= existing.resetAt) {
-    buckets.set(options.key, { count: 1, resetAt: now + windowMs });
-    return;
+  if (error) {
+    throw new RateLimitError("Unable to enforce rate limit right now.");
   }
 
-  existing.count += 1;
-
-  if (existing.count > max) {
+  const allowed = data?.[0]?.allowed === true;
+  if (!allowed) {
     throw new RateLimitError("Too many requests. Please try again later.");
   }
-}
-
-/** Clears all buckets — intended for tests only. */
-export function resetRateLimitsForTests(): void {
-  buckets.clear();
 }

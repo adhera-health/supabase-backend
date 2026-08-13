@@ -117,7 +117,7 @@ async function handleCreateUser(c: Context) {
     c.req.header("Authorization"),
     PERMISSIONS.USERS_CREATE,
   );
-  assertAdminActionRateLimit(admin.id, "user_create");
+  await assertAdminActionRateLimit(admin.id, "user_create");
   const actorIp = getClientIp(c);
 
   logger.info("Creating dashboard user", {
@@ -153,7 +153,7 @@ async function handleUpdateUserRole(c: Context) {
     c.req.header("Authorization"),
     PERMISSIONS.USERS_UPDATE_ROLE,
   );
-  assertAdminActionRateLimit(admin.id, "user_role_update");
+  await assertAdminActionRateLimit(admin.id, "user_role_update");
 
   const params = parseSchema(updateUserRoleParamsSchema, {
     auth_user_id: c.req.param("auth_user_id"),
@@ -202,7 +202,7 @@ async function handleDeleteUser(c: Context) {
     c.req.header("Authorization"),
     PERMISSIONS.USERS_DELETE,
   );
-  assertAdminActionRateLimit(admin.id, "user_delete");
+  await assertAdminActionRateLimit(admin.id, "user_delete");
 
   const params = parseSchema(deleteUserParamsSchema, {
     auth_user_id: c.req.param("auth_user_id"),
