@@ -140,6 +140,24 @@ export async function assertCompleteOnboardingRateLimit(clientIp: string): Promi
   });
 }
 
+/**
+ * Complete-onboarding password sign-in — per invitation, independent of the
+ * per-IP endpoint limit above. Bounds password-guessing against an existing
+ * account (OWASP: onboarding doubles as a login oracle for existing
+ * accounts) even when the attacker rotates client IPs, since the budget is
+ * keyed to the invitation the attacker must already hold a token for.
+ */
+export async function assertOnboardingSignInRateLimit(invitationId: number): Promise<void> {
+  await assertRateLimit({
+    key: `onboarding-signin:${invitationId}`,
+    max: parsePositiveInt(Deno.env.get("RATE_LIMIT_ONBOARDING_SIGNIN_MAX"), 5),
+    windowMs: parsePositiveInt(
+      Deno.env.get("RATE_LIMIT_ONBOARDING_SIGNIN_WINDOW_MS"),
+      1_800_000,
+    ),
+  });
+}
+
 /** Public communication opt-out — per client IP. */
 export async function assertOptOutRateLimit(clientIp: string): Promise<void> {
   await assertRateLimit({

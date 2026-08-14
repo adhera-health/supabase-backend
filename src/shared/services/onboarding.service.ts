@@ -36,6 +36,7 @@ import {
   toUserResource,
 } from "@shared/utils/api-mappers.ts";
 import { createLogger } from "@shared/utils/logger.ts";
+import { assertOnboardingSignInRateLimit } from "@shared/utils/rate-limit-presets.ts";
 import type { InvitationStatus, PatientInvitation } from "@domain/invitation.ts";
 import type { CreatedLicense, LicenseSource } from "@domain/license.ts";
 import type { OnboardingAssignment } from "@domain/onboarding.ts";
@@ -86,7 +87,10 @@ function isExistingUserError(message: string): boolean {
 async function signInPatient(
   email: string,
   password: string,
+  invitationId: number,
 ): Promise<{ userId: string; session: { access_token: string; refresh_token: string; expires_in?: number; token_type?: string } }> {
+  await assertOnboardingSignInRateLimit(invitationId);
+
   const anonClient = getAnonAuthClient();
   const { data: sessionData, error: signInError } = await anonClient.auth
     .signInWithPassword({ email, password });
@@ -116,6 +120,7 @@ async function signInPatient(
 async function establishPatientSession(
   email: string,
   password: string,
+  invitationId: number,
 ): Promise<{ userId: string; session: { access_token: string; refresh_token: string; expires_in?: number; token_type?: string } }> {
   const serviceClient = getServiceClient();
 
@@ -128,11 +133,11 @@ async function establishPatientSession(
     });
 
   if (!createError && createdUser.user) {
-    return signInPatient(email, password);
+    return signInPatient(email, password, invitationId);
   }
 
   if (createError && isExistingUserError(createError.message)) {
-    return signInPatient(email, password);
+    return signInPatient(email, password, invitationId);
   }
 
   if (createError) {
@@ -342,7 +347,11 @@ export async function completeOnboarding(
       });
     }
 
-    const { userId, session } = await establishPatientSession(email, input.password);
+    const { userId, session } = await establishPatientSession(
+      email,
+      input.password,
+      invitation.id,
+    );
 
     if (existingAssignment.user_id !== userId) {
       throw new ConflictError("This invitation is already registered to another user");
@@ -379,7 +388,11 @@ export async function completeOnboarding(
     throw new ConflictError("A license already exists for this invitation");
   }
 
-  const { userId, session } = await establishPatientSession(email, input.password);
+  const { userId, session } = await establishPatientSession(
+    email,
+    input.password,
+    invitation.id,
+  );
 
   const snapshot = requireInvitationLicenseSnapshot(invitation);
   const license = await createPatientLicense(snapshot);
