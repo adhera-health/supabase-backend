@@ -12,9 +12,7 @@ import type {
   ListClientsResponse,
 } from "@domain/adhera-core.ts";
 import { logAuditEvent } from "@shared/services/audit.service.ts";
-import { sendInvitationEmail } from "@shared/services/invitation-email.service.ts";
 import type { SendInvitationEmailInput } from "@shared/services/invitation-email.service.ts";
-import { resolveInvitationEmailContent } from "@shared/services/email-template.service.ts";
 import {
   createInvitationWithToken,
   dropOutInvitation,
@@ -193,6 +191,13 @@ async function handleSendInvitation(c: Context) {
     has_email_override: Boolean(input.email_override),
   });
 
+  const { resolveInvitationEmailContent } = await import(
+    "@shared/services/email-template.service.ts"
+  );
+  const { sendInvitationEmail } = await import(
+    "@shared/services/invitation-email.service.ts"
+  );
+
   const contentOverride = buildContentOverride(input.email_override);
   // Fail before DB writes when default template is missing or override HTML is invalid.
   await resolveInvitationEmailContent(contentOverride);
@@ -309,6 +314,13 @@ async function handleResendInvitation(c: Context) {
     role: actor.role,
     has_email_override: Boolean(parsedBody?.email_override),
   });
+
+  const { resolveInvitationEmailContent } = await import(
+    "@shared/services/email-template.service.ts"
+  );
+  const { sendInvitationEmail } = await import(
+    "@shared/services/invitation-email.service.ts"
+  );
 
   const contentOverride = buildContentOverride(parsedBody?.email_override);
   await resolveInvitationEmailContent(contentOverride);

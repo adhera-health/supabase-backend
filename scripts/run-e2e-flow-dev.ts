@@ -10,9 +10,9 @@ import { createInvitationWithToken } from "@shared/services/invitation.service.t
 const BASE = Deno.env.get("SUPABASE_URL")?.replace(/\/$/, "") ?? "http://127.0.0.1:54321";
 const ANON = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 const CLIENT = Deno.env.get("DEV_ADMIN_CLIENT_ID") ??
-  "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+  "36";
 const PROGRAM = Deno.env.get("DEV_ADMIN_PROGRAM_ID") ??
-  "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+  "42";
 const ADMIN_EMAIL = Deno.env.get("DEV_ADMIN_EMAIL") ?? "admin@adhera.dev";
 const ADMIN_PASSWORD = Deno.env.get("DEV_ADMIN_PASSWORD") ?? "AdminPass123";
 
