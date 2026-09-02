@@ -17,3 +17,18 @@ export async function deleteStaleRateLimits(cutoffIso: string): Promise<number> 
 
   return count ?? 0;
 }
+
+/** Reads the current request_count for `key`/`windowStart` without incrementing it. Returns 0 if no row exists. */
+export async function getRateLimitCount(key: string, windowStart: number): Promise<number> {
+  const db = getServiceClient();
+  const { data, error } = await db
+    .from("rate_limits")
+    .select("request_count")
+    .eq("key", key)
+    .eq("window_start", windowStart)
+    .maybeSingle();
+
+  if (error) raiseDbError("Failed to read rate_limits row", error);
+
+  return data?.request_count ?? 0;
+}

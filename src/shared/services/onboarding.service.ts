@@ -36,7 +36,11 @@ import {
   toUserResource,
 } from "@shared/utils/api-mappers.ts";
 import { createLogger } from "@shared/utils/logger.ts";
-import { assertOnboardingSignInRateLimit } from "@shared/utils/rate-limit-presets.ts";
+import {
+  assertOnboardingSignInNotLockedOut,
+  assertOnboardingSignInRateLimit,
+  recordOnboardingSignInFailure,
+} from "@shared/utils/rate-limit-presets.ts";
 import type { InvitationStatus, PatientInvitation } from "@domain/invitation.ts";
 import type { CreatedLicense, LicenseSource } from "@domain/license.ts";
 import type { OnboardingAssignment } from "@domain/onboarding.ts";
@@ -90,12 +94,14 @@ async function signInPatient(
   invitationId: number,
 ): Promise<{ userId: string; session: { access_token: string; refresh_token: string; expires_in?: number; token_type?: string } }> {
   await assertOnboardingSignInRateLimit(invitationId);
+  await assertOnboardingSignInNotLockedOut(invitationId);
 
   const anonClient = getAnonAuthClient();
   const { data: sessionData, error: signInError } = await anonClient.auth
     .signInWithPassword({ email, password });
 
   if (signInError || !sessionData.session || !sessionData.user) {
+    await recordOnboardingSignInFailure(invitationId);
     throw new UnauthorizedError("Invalid email or password for this invitation");
   }
 

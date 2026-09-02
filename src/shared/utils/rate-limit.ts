@@ -14,7 +14,7 @@ function parsePositiveInt(value: string | undefined, fallback: number): number {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
-function getWindowStart(now: number, windowMs: number): number {
+export function getWindowStart(now: number, windowMs: number): number {
   return Math.floor(now / windowMs) * windowMs;
 }
 
@@ -49,5 +49,26 @@ export async function assertRateLimit(options: RateLimitOptions): Promise<void> 
   const allowed = data?.[0]?.allowed === true;
   if (!allowed) {
     throw new RateLimitError("Too many requests. Please try again later.");
+  }
+}
+
+/**
+ * Increments the bucket for `key` without enforcing a max — for callers that
+ * track counts (e.g. failed attempts toward a separate lockout threshold)
+ * rather than gate the current request on this call.
+ */
+export async function recordRateLimitHit(key: string, windowMs: number): Promise<void> {
+  const now = Date.now();
+  const windowStart = getWindowStart(now, windowMs);
+
+  const client = getServiceClient();
+  const { error } = await client.rpc("acquire_rate_limit_bucket", {
+    p_key: key,
+    p_window_start: windowStart,
+    p_max: Number.MAX_SAFE_INTEGER,
+  });
+
+  if (error) {
+    throw new RateLimitError("Unable to enforce rate limit right now.");
   }
 }

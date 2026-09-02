@@ -7,7 +7,11 @@
  */
 
 import { assertEquals, assertRejects } from "@std/assert";
-import { assertOnboardingSignInRateLimit } from "@shared/utils/rate-limit-presets.ts";
+import {
+  assertOnboardingSignInNotLockedOut,
+  assertOnboardingSignInRateLimit,
+  recordOnboardingSignInFailure,
+} from "@shared/utils/rate-limit-presets.ts";
 import { RateLimitError } from "@shared/utils/errors.ts";
 import { getServiceClient } from "@shared/database/client.ts";
 
@@ -21,6 +25,13 @@ async function cleanupInvitation(invitationId: number): Promise<void> {
     .from("rate_limits")
     .delete()
     .eq("key", `onboarding-signin:${invitationId}`);
+}
+
+async function cleanupLockout(invitationId: number): Promise<void> {
+  await getServiceClient()
+    .from("rate_limits")
+    .delete()
+    .eq("key", `onboarding-signin-lockout:${invitationId}`);
 }
 
 Deno.test("assertOnboardingSignInRateLimit allows attempts up to the configured max", async () => {
@@ -99,5 +110,103 @@ Deno.test("assertOnboardingSignInRateLimit defaults to 5 attempts per 30 minutes
     );
   } finally {
     await cleanupInvitation(invitationId);
+  }
+});
+
+/**
+ * Fixed-window buckets are aligned to absolute wall-clock time, not to the
+ * first call — see rate-limit.test.ts for why this wait is needed to keep
+ * rollover assertions deterministic.
+ */
+async function waitForFreshWindow(windowMs: number): Promise<void> {
+  while (Date.now() % windowMs > windowMs * 0.2) {
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+}
+
+Deno.test("assertOnboardingSignInNotLockedOut allows attempts below the failure threshold", async () => {
+  const invitationId = uniqueInvitationId();
+  Deno.env.set("RATE_LIMIT_ONBOARDING_LOCKOUT_MAX_FAILURES", "3");
+  Deno.env.set("RATE_LIMIT_ONBOARDING_LOCKOUT_WINDOW_MS", "60000");
+  try {
+    for (let i = 0; i < 2; i++) {
+      await assertOnboardingSignInNotLockedOut(invitationId);
+      await recordOnboardingSignInFailure(invitationId);
+    }
+
+    // Third attempt: still under the max-3 threshold (2 failures recorded so far).
+    await assertOnboardingSignInNotLockedOut(invitationId);
+  } finally {
+    await cleanupLockout(invitationId);
+    Deno.env.delete("RATE_LIMIT_ONBOARDING_LOCKOUT_MAX_FAILURES");
+    Deno.env.delete("RATE_LIMIT_ONBOARDING_LOCKOUT_WINDOW_MS");
+  }
+});
+
+Deno.test("assertOnboardingSignInNotLockedOut rejects once failures reach the threshold", async () => {
+  const invitationId = uniqueInvitationId();
+  Deno.env.set("RATE_LIMIT_ONBOARDING_LOCKOUT_MAX_FAILURES", "3");
+  Deno.env.set("RATE_LIMIT_ONBOARDING_LOCKOUT_WINDOW_MS", "60000");
+  try {
+    for (let i = 0; i < 3; i++) {
+      await recordOnboardingSignInFailure(invitationId);
+    }
+
+    await assertRejects(
+      () => assertOnboardingSignInNotLockedOut(invitationId),
+      RateLimitError,
+      "Too many failed sign-in attempts",
+    );
+  } finally {
+    await cleanupLockout(invitationId);
+    Deno.env.delete("RATE_LIMIT_ONBOARDING_LOCKOUT_MAX_FAILURES");
+    Deno.env.delete("RATE_LIMIT_ONBOARDING_LOCKOUT_WINDOW_MS");
+  }
+});
+
+Deno.test("assertOnboardingSignInNotLockedOut tracks failures independently per invitation", async () => {
+  const invitationA = uniqueInvitationId();
+  const invitationB = invitationA + 1;
+  Deno.env.set("RATE_LIMIT_ONBOARDING_LOCKOUT_MAX_FAILURES", "1");
+  Deno.env.set("RATE_LIMIT_ONBOARDING_LOCKOUT_WINDOW_MS", "60000");
+  try {
+    await recordOnboardingSignInFailure(invitationA);
+
+    await assertRejects(
+      () => assertOnboardingSignInNotLockedOut(invitationA),
+      RateLimitError,
+    );
+
+    // A different invitation's lockout budget must be untouched by A's exhaustion.
+    await assertOnboardingSignInNotLockedOut(invitationB);
+  } finally {
+    await cleanupLockout(invitationA);
+    await cleanupLockout(invitationB);
+    Deno.env.delete("RATE_LIMIT_ONBOARDING_LOCKOUT_MAX_FAILURES");
+    Deno.env.delete("RATE_LIMIT_ONBOARDING_LOCKOUT_WINDOW_MS");
+  }
+});
+
+Deno.test("assertOnboardingSignInNotLockedOut clears once the lockout window rolls over", async () => {
+  const invitationId = uniqueInvitationId();
+  const windowMs = 300;
+  Deno.env.set("RATE_LIMIT_ONBOARDING_LOCKOUT_MAX_FAILURES", "1");
+  Deno.env.set("RATE_LIMIT_ONBOARDING_LOCKOUT_WINDOW_MS", String(windowMs));
+  try {
+    await waitForFreshWindow(windowMs);
+    await recordOnboardingSignInFailure(invitationId);
+
+    await assertRejects(
+      () => assertOnboardingSignInNotLockedOut(invitationId),
+      RateLimitError,
+    );
+
+    await new Promise((resolve) => setTimeout(resolve, windowMs + 100));
+
+    await assertOnboardingSignInNotLockedOut(invitationId);
+  } finally {
+    await cleanupLockout(invitationId);
+    Deno.env.delete("RATE_LIMIT_ONBOARDING_LOCKOUT_MAX_FAILURES");
+    Deno.env.delete("RATE_LIMIT_ONBOARDING_LOCKOUT_WINDOW_MS");
   }
 });

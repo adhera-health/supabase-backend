@@ -2,7 +2,9 @@
  * Named rate-limit presets for edge function routes (PRD §19 / OWASP).
  */
 
-import { assertRateLimit } from "@shared/utils/rate-limit.ts";
+import { assertRateLimit, getWindowStart, recordRateLimitHit } from "@shared/utils/rate-limit.ts";
+import { getRateLimitCount } from "@shared/database/queries/rate-limit.query.ts";
+import { RateLimitError } from "@shared/utils/errors.ts";
 
 function parsePositiveInt(value: string | undefined, fallback: number): number {
   if (!value) return fallback;
@@ -156,6 +158,43 @@ export async function assertOnboardingSignInRateLimit(invitationId: number): Pro
       1_800_000,
     ),
   });
+}
+
+function onboardingSignInLockoutKey(invitationId: number): string {
+  return `onboarding-signin-lockout:${invitationId}`;
+}
+
+function onboardingSignInLockoutWindowMs(): number {
+  return parsePositiveInt(
+    Deno.env.get("RATE_LIMIT_ONBOARDING_LOCKOUT_WINDOW_MS"),
+    86_400_000, // 24h
+  );
+}
+
+/**
+ * Rejects resume sign-in attempts once an invitation has accumulated too many
+ * *failed* password attempts within the lockout window. Unlike
+ * assertOnboardingSignInRateLimit's rolling 30-minute window (which an
+ * attacker can simply wait out indefinitely), this tracks failures only
+ * over a long window, capping total lifetime guesses per invitation.
+ * Call before attempting the password sign-in.
+ */
+export async function assertOnboardingSignInNotLockedOut(invitationId: number): Promise<void> {
+  const windowMs = onboardingSignInLockoutWindowMs();
+  const max = parsePositiveInt(Deno.env.get("RATE_LIMIT_ONBOARDING_LOCKOUT_MAX_FAILURES"), 5);
+  const windowStart = getWindowStart(Date.now(), windowMs);
+
+  const count = await getRateLimitCount(onboardingSignInLockoutKey(invitationId), windowStart);
+  if (count >= max) {
+    throw new RateLimitError(
+      "Too many failed sign-in attempts for this invitation. Please try again later.",
+    );
+  }
+}
+
+/** Records a failed resume sign-in toward the lockout budget above. */
+export async function recordOnboardingSignInFailure(invitationId: number): Promise<void> {
+  await recordRateLimitHit(onboardingSignInLockoutKey(invitationId), onboardingSignInLockoutWindowMs());
 }
 
 /** Public communication opt-out — per client IP. */
