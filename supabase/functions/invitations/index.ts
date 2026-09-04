@@ -12,9 +12,7 @@ import type {
   ListClientsResponse,
 } from "@domain/adhera-core.ts";
 import { logAuditEvent } from "@shared/services/audit.service.ts";
-import { sendInvitationEmail } from "@shared/services/invitation-email.service.ts";
 import type { SendInvitationEmailInput } from "@shared/services/invitation-email.service.ts";
-import { resolveInvitationEmailContent } from "@shared/services/email-template.service.ts";
 import {
   createInvitationWithToken,
   dropOutInvitation,
@@ -130,7 +128,7 @@ async function handleListClients(c: Context) {
     c.req.header("Authorization"),
     PERMISSIONS.INVITATIONS_CLIENTS_LIST,
   );
-  assertAdminActionRateLimit(actor.id, "invitation_clients_list");
+  await assertAdminActionRateLimit(actor.id, "invitation_clients_list");
 
   logger.info("Listing active clients for invitation dropdown", {
     role: actor.role,
@@ -152,7 +150,7 @@ async function handleListClientPrograms(c: Context) {
     c.req.header("Authorization"),
     PERMISSIONS.INVITATIONS_CLIENTS_LIST,
   );
-  assertAdminActionRateLimit(actor.id, "invitation_client_programs_list");
+  await assertAdminActionRateLimit(actor.id, "invitation_client_programs_list");
 
   logger.info("Listing programs for invitation dropdown", {
     role: actor.role,
@@ -180,7 +178,7 @@ async function handleSendInvitation(c: Context) {
     c.req.header("Authorization"),
     PERMISSIONS.INVITATIONS_SEND,
   );
-  assertAdminActionRateLimit(actor.id, "invitation_send");
+  await assertAdminActionRateLimit(actor.id, "invitation_send");
   const adminScope = resolveAdminScope(actor);
   const invitedByUserId = actor.id;
   const actorIp = getClientIp(c);
@@ -193,6 +191,13 @@ async function handleSendInvitation(c: Context) {
     role: actor.role,
     has_email_override: Boolean(input.email_override),
   });
+
+  const { resolveInvitationEmailContent } = await import(
+    "@shared/services/email-template.service.ts"
+  );
+  const { sendInvitationEmail } = await import(
+    "@shared/services/invitation-email.service.ts"
+  );
 
   const contentOverride = buildContentOverride(input.email_override);
   // Fail before DB writes when default template is missing or override HTML is invalid.
@@ -252,7 +257,7 @@ async function handleValidateToken(c: Context) {
   const logger = createLogger("invitations");
   const actorIp = getClientIp(c) ?? "unknown";
 
-  assertValidateTokenRateLimit(actorIp);
+  await assertValidateTokenRateLimit(actorIp);
 
   const input = parseSchema(validateTokenQuerySchema, {
     token: c.req.query("token"),
@@ -302,7 +307,7 @@ async function handleResendInvitation(c: Context) {
     c.req.header("Authorization"),
     PERMISSIONS.INVITATIONS_RESEND,
   );
-  assertAdminActionRateLimit(actor.id, "invitation_resend");
+  await assertAdminActionRateLimit(actor.id, "invitation_resend");
   const actorIp = getClientIp(c);
 
   logger.info("Resending invitation", {
@@ -310,6 +315,13 @@ async function handleResendInvitation(c: Context) {
     role: actor.role,
     has_email_override: Boolean(parsedBody?.email_override),
   });
+
+  const { resolveInvitationEmailContent } = await import(
+    "@shared/services/email-template.service.ts"
+  );
+  const { sendInvitationEmail } = await import(
+    "@shared/services/invitation-email.service.ts"
+  );
 
   const contentOverride = buildContentOverride(parsedBody?.email_override);
   await resolveInvitationEmailContent(contentOverride);
@@ -416,7 +428,7 @@ async function handleDropOutInvitation(c: Context) {
     c.req.header("Authorization"),
     PERMISSIONS.INVITATIONS_DROP_OUT,
   );
-  assertAdminActionRateLimit(actor.id, "invitation_drop_out");
+  await assertAdminActionRateLimit(actor.id, "invitation_drop_out");
   const recordedByUserId = actor.id;
   const actorIp = getClientIp(c);
 

@@ -105,7 +105,7 @@ async function handleCreateEmailTemplate(c: Context) {
     c.req.header("Authorization"),
     PERMISSIONS.EMAIL_TEMPLATES_MANAGE,
   );
-  assertAdminActionRateLimit(admin.id, "email_template_create");
+  await assertAdminActionRateLimit(admin.id, "email_template_create");
 
   const input = parseSchema(createEmailTemplateSchema, await parseJsonBody(c));
 
@@ -142,7 +142,7 @@ async function handleUpdateEmailTemplate(c: Context) {
     c.req.header("Authorization"),
     PERMISSIONS.EMAIL_TEMPLATES_MANAGE,
   );
-  assertAdminActionRateLimit(admin.id, "email_template_update");
+  await assertAdminActionRateLimit(admin.id, "email_template_update");
 
   const params = parseSchema(emailTemplateUuidParamsSchema, {
     template_uuid: c.req.param("template_uuid"),
@@ -179,7 +179,7 @@ async function handleDeleteEmailTemplate(c: Context) {
     c.req.header("Authorization"),
     PERMISSIONS.EMAIL_TEMPLATES_MANAGE,
   );
-  assertAdminActionRateLimit(admin.id, "email_template_delete");
+  await assertAdminActionRateLimit(admin.id, "email_template_delete");
 
   const params = parseSchema(emailTemplateUuidParamsSchema, {
     template_uuid: c.req.param("template_uuid"),

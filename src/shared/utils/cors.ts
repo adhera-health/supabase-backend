@@ -6,7 +6,7 @@ import { isProductionEnvironment } from "@shared/utils/environment.ts";
 import { AppError, ForbiddenError } from "@shared/utils/errors.ts";
 
 const CORS_ALLOW_HEADERS =
-  "authorization, x-client-info, apikey, content-type, x-reminder-cron-secret, x-correlation-id, x-license-reservation-secret";
+  "authorization, x-client-info, apikey, content-type, x-cron-secret, x-correlation-id, x-license-reservation-secret";
 
 const CORS_EXPOSE_HEADERS = "X-Correlation-ID";
 

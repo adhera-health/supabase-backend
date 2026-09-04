@@ -1,12 +1,13 @@
 /**
- * Cron / internal auth for scheduled reminder runs.
+ * Cron / internal auth for scheduled maintenance runs (reminders, rate limit
+ * cleanup, ...).
  */
 
 import { timingSafeEqualStrings } from "@shared/utils/secret-compare.ts";
 import { ForbiddenError, UnauthorizedError, AppError } from "@shared/utils/errors.ts";
 import type { Context } from "hono";
 
-const CRON_SECRET_HEADER = "x-reminder-cron-secret";
+const CRON_SECRET_HEADER = "x-cron-secret";
 
 /**
  * Guards `POST /reminders/run` with a shared secret.
@@ -15,12 +16,12 @@ const CRON_SECRET_HEADER = "x-reminder-cron-secret";
  * open door. This route triggers a batch patient email send, so an unconfigured
  * secret previously let anyone fire it outside production.
  */
-export async function assertReminderCronAuth(c: Context): Promise<void> {
-  const configuredSecret = Deno.env.get("REMINDER_CRON_SECRET")?.trim();
+export async function assertCronAuth(c: Context): Promise<void> {
+  const configuredSecret = Deno.env.get("CRON_SECRET")?.trim();
 
   if (!configuredSecret) {
     throw new AppError(
-      "REMINDER_CRON_SECRET is not configured. This route is unavailable until it is set.",
+      "CRON_SECRET is not configured. This route is unavailable until it is set.",
       { statusCode: 500, code: "INTERNAL_ERROR" },
     );
   }
@@ -32,10 +33,10 @@ export async function assertReminderCronAuth(c: Context): Promise<void> {
     (bearer?.startsWith("Bearer ") ? bearer.slice("Bearer ".length).trim() : undefined);
 
   if (!providedSecret) {
-    throw new UnauthorizedError("Missing reminder cron credentials");
+    throw new UnauthorizedError("Missing cron credentials");
   }
 
   if (!await timingSafeEqualStrings(providedSecret, configuredSecret)) {
-    throw new ForbiddenError("Invalid reminder cron credentials");
+    throw new ForbiddenError("Invalid cron credentials");
   }
 }

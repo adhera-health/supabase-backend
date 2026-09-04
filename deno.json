@@ -12,11 +12,13 @@
     "@std/testing/mock": "jsr:@std/testing@^1.0.19/mock",
     "@supabase/supabase-js": "npm:@supabase/supabase-js@2.108.1",
     "zod": "npm:zod@3.24.4",
-    "hono": "jsr:@hono/hono@^4.7.10"
+    "hono": "jsr:@hono/hono@^4.7.10",
+    "xss": "npm:xss@1.0.15"
   },
   "tasks": {
     "seed:admin": "deno run --env-file=.env --allow-env --allow-net scripts/seed-dev-admin.ts",
     "run:reminders": "deno run --env-file=.env --allow-env --allow-net scripts/run-reminders-dev.ts",
+    "run:rate-limits-cleanup": "deno run --env-file=.env --allow-env --allow-net scripts/run-rate-limits-cleanup-dev.ts",
     "test:e2e": "deno run --env-file=.env --allow-env --allow-net scripts/run-e2e-flow-dev.ts"
   }
 }

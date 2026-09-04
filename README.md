@@ -41,13 +41,15 @@ Functions are available at:
 | `users` | Staff user management (admin) |
 | `reminders` | Cron: onboarding reminder emails |
 | `patient-opt-out-email-reminders` | Patient opt-out of reminders |
+| `rate-limits-cleanup` | Cron: purge stale rate_limits rows |
 
 ## Deno tasks
 
 ```bash
-deno task seed:admin      # Create/update local admin user
-deno task test:e2e        # Full patient flow smoke test (requires steps above)
-deno task run:reminders   # Run reminder job manually (dev)
+deno task seed:admin              # Create/update local admin user
+deno task test:e2e                # Full patient flow smoke test (requires steps above)
+deno task run:reminders           # Run reminder job manually (dev)
+deno task run:rate-limits-cleanup # Run rate_limits cleanup manually (dev)
 ```
 
 ## Tests
@@ -55,6 +57,9 @@ deno task run:reminders   # Run reminder job manually (dev)
 ```bash
 # Unit tests
 deno test --allow-env src/shared/auth/rbac.test.ts src/integrations/license/auth0.test.ts
+
+# Rate limiter integration tests (Postgres-backed; requires `supabase start`)
+deno test --env-file=.env --allow-env --allow-net src/shared/utils/rate-limit.test.ts
 
 # E2E (Supabase + functions serve must be running)
 deno task test:e2e

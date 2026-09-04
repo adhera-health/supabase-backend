@@ -49,7 +49,7 @@ async function handleUploadConsentDocument(c: Context) {
     c.req.header("Authorization"),
     PERMISSIONS.CONSENT_DOCUMENTS_MANAGE,
   );
-  assertAdminActionRateLimit(admin.id, "consent_document_upload");
+  await assertAdminActionRateLimit(admin.id, "consent_document_upload");
   const scope = resolveAdminScope(admin);
 
   const input: UploadConsentDocumentPayload = parseSchema(
@@ -96,7 +96,7 @@ async function handleActivateConsentDocument(c: Context) {
     c.req.header("Authorization"),
     PERMISSIONS.CONSENT_DOCUMENTS_MANAGE,
   );
-  assertAdminActionRateLimit(admin.id, "consent_document_activate");
+  await assertAdminActionRateLimit(admin.id, "consent_document_activate");
   const scope = resolveAdminScope(admin);
 
   const params = parseSchema(activateConsentDocumentParamsSchema, {

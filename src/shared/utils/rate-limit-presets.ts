@@ -99,17 +99,17 @@ const ADMIN_ACTION_DEFAULTS: Record<
 const ADMIN_WINDOW_MS_ENV = "RATE_LIMIT_ADMIN_WINDOW_MS";
 
 /** Rate limit authenticated staff mutations per admin user id. */
-export function assertAdminActionRateLimit(
+export async function assertAdminActionRateLimit(
   adminUserId: string,
   action: AdminRateLimitAction,
-): void {
+): Promise<void> {
   const preset = ADMIN_ACTION_DEFAULTS[action];
   const windowMs = parsePositiveInt(
     Deno.env.get(ADMIN_WINDOW_MS_ENV),
     preset.windowMs,
   );
 
-  assertRateLimit({
+  await assertRateLimit({
     key: `admin:${action}:${adminUserId}`,
     max: parsePositiveInt(Deno.env.get(preset.envMaxKey), preset.max),
     windowMs,
@@ -117,8 +117,8 @@ export function assertAdminActionRateLimit(
 }
 
 /** Public validate-token (GET) — per client IP. */
-export function assertValidateTokenRateLimit(clientIp: string): void {
-  assertRateLimit({
+export async function assertValidateTokenRateLimit(clientIp: string): Promise<void> {
+  await assertRateLimit({
     key: `validate-token:${clientIp}`,
     max: parsePositiveInt(Deno.env.get("RATE_LIMIT_VALIDATE_TOKEN_MAX"), 60),
     windowMs: parsePositiveInt(
@@ -129,8 +129,8 @@ export function assertValidateTokenRateLimit(clientIp: string): void {
 }
 
 /** Public complete-onboarding — per client IP. */
-export function assertCompleteOnboardingRateLimit(clientIp: string): void {
-  assertRateLimit({
+export async function assertCompleteOnboardingRateLimit(clientIp: string): Promise<void> {
+  await assertRateLimit({
     key: `complete-onboarding:${clientIp}`,
     max: parsePositiveInt(Deno.env.get("RATE_LIMIT_COMPLETE_ONBOARDING_MAX"), 10),
     windowMs: parsePositiveInt(
@@ -152,13 +152,31 @@ export function assertLicenseReservationLookupRateLimit(clientIp: string): void 
     windowMs: parsePositiveInt(
       Deno.env.get("RATE_LIMIT_LICENSE_LOOKUP_WINDOW_MS"),
       60_000,
+      ),
+  });
+}
+
+/*
+ * Complete-onboarding password sign-in — per invitation, independent of the
+ * per-IP endpoint limit above. Bounds password-guessing against an existing
+ * account (OWASP: onboarding doubles as a login oracle for existing
+ * accounts) even when the attacker rotates client IPs, since the budget is
+ * keyed to the invitation the attacker must already hold a token for.
+ */
+export async function assertOnboardingSignInRateLimit(invitationId: number): Promise<void> {
+  await assertRateLimit({
+    key: `onboarding-signin:${invitationId}`,
+    max: parsePositiveInt(Deno.env.get("RATE_LIMIT_ONBOARDING_SIGNIN_MAX"), 5),
+    windowMs: parsePositiveInt(
+      Deno.env.get("RATE_LIMIT_ONBOARDING_SIGNIN_WINDOW_MS"),
+      1_800_000,
     ),
   });
 }
 
 /** Public communication opt-out — per client IP. */
-export function assertOptOutRateLimit(clientIp: string): void {
-  assertRateLimit({
+export async function assertOptOutRateLimit(clientIp: string): Promise<void> {
+  await assertRateLimit({
     key: `patient-opt-out-email-reminders:${clientIp}`,
     max: parsePositiveInt(Deno.env.get("RATE_LIMIT_OPT_OUT_MAX"), 30),
     windowMs: parsePositiveInt(

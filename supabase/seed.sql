@@ -13,8 +13,8 @@ INSERT INTO consent_documents (
   storage_duration,
   rights_info
 ) VALUES (
-  'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-  'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+  '36',
+  '42',
   '1.0',
   'https://example.com/consent/adhera-participation-v1.pdf',
   'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
@@ -47,8 +47,8 @@ INSERT INTO consent_documents (
   storage_duration,
   rights_info
 ) VALUES (
-  '22222222-2222-4222-8222-222222222222',
-  '33333333-3333-4333-8333-333333333333',
+  '37',
+  '41',
   '1.0',
   'https://example.com/consent/adhera-participation-v1.pdf',
   'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',

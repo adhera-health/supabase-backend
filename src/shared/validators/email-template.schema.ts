@@ -12,8 +12,8 @@ import type {
 } from "@domain/email-template.ts";
 import { parseSchema } from "@shared/validators/parse-schema.ts";
 import {
-  collectUnsafeEmailHtmlIssues,
   findMissingRequiredInvitationPlaceholders,
+  sanitizeInvitationEmailHtmlBody,
 } from "@shared/utils/email-template-validation.ts";
 
 const uuidSchema = z.string().uuid("Must be a valid UUID");
@@ -27,11 +27,16 @@ function addHtmlBodyIssues(
   ctx: z.RefinementCtx,
   fieldPath: (string | number)[] = ["html_body"],
 ): void {
-  for (const message of collectUnsafeEmailHtmlIssues(value)) {
-    ctx.addIssue({ code: "custom", message, path: fieldPath });
+  const sanitizedHtmlBody = sanitizeInvitationEmailHtmlBody(value);
+  if (sanitizedHtmlBody !== value) {
+    ctx.addIssue({
+      code: "custom",
+      message: "HTML contains disallowed markup or attributes",
+      path: fieldPath,
+    });
   }
 
-  const missing = findMissingRequiredInvitationPlaceholders(value);
+  const missing = findMissingRequiredInvitationPlaceholders(sanitizedHtmlBody);
   if (missing.length > 0) {
     ctx.addIssue({
       code: "custom",

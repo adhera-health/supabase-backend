@@ -4,7 +4,7 @@
  * POST /reminders/run — process due +2h / +48h reminders (cron or manual)
  */
 
-import { assertReminderCronAuth } from "@shared/auth/reminder-cron-auth.ts";
+import { assertCronAuth } from "@shared/auth/cron-auth.ts";
 import { requireAnyPermission } from "@shared/auth/authorization.ts";
 import { PERMISSIONS } from "@shared/auth/permissions.ts";
 import { runDueOnboardingReminders } from "@shared/services/reminder.service.ts";
@@ -32,7 +32,7 @@ const app = createHonoApp().basePath(`/${FUNCTION_NAME}`);
 async function handleRunReminders(c: Context) {
   const logger = createLogger("reminders");
 
-  await assertReminderCronAuth(c);
+  await assertCronAuth(c);
 
   let body: unknown = {};
   if (c.req.header("content-length") && c.req.header("content-length") !== "0") {

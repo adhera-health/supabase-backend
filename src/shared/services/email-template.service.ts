@@ -17,7 +17,10 @@ import {
   ConflictError,
   NotFoundError,
 } from "@shared/utils/errors.ts";
-import { assertInvitationEmailHtmlBodyValid } from "@shared/utils/email-template-validation.ts";
+import {
+  assertInvitationEmailHtmlBodyValid,
+  sanitizeInvitationEmailHtmlBody,
+} from "@shared/utils/email-template-validation.ts";
 import type {
   CreateEmailTemplateInput,
   CreateEmailTemplateResponse,
@@ -81,11 +84,13 @@ export async function createEmailTemplate(
     await clearDefaultEmailTemplate(input.template_type);
   }
 
+  const sanitizedHtmlBody = sanitizeInvitationEmailHtmlBody(input.html_body);
+
   const row = await insertEmailTemplateRow({
     name: input.name,
     template_type: input.template_type,
     subject: input.subject,
-    html_body: input.html_body,
+    html_body: sanitizedHtmlBody,
     is_default: isDefault,
   });
 
@@ -111,7 +116,15 @@ export async function updateEmailTemplate(
     );
   }
 
-  const row = await updateEmailTemplateRow(existing.id, input);
+  const patch: UpdateEmailTemplateInput = { ...input };
+
+  if (input.html_body !== undefined) {
+    const sanitizedHtmlBody = sanitizeInvitationEmailHtmlBody(input.html_body);
+    assertInvitationEmailHtmlBodyValid(sanitizedHtmlBody, { fieldPath: "html_body" });
+    patch.html_body = sanitizedHtmlBody;
+  }
+
+  const row = await updateEmailTemplateRow(existing.id, patch);
   return { template: toEmailTemplateResource(row) };
 }
 
@@ -160,7 +173,9 @@ export async function resolveInvitationEmailContent(
     );
   }
 
-  assertInvitationEmailHtmlBodyValid(htmlBody, {
+  const sanitizedHtmlBody = sanitizeInvitationEmailHtmlBody(htmlBody);
+  
+  assertInvitationEmailHtmlBodyValid(sanitizedHtmlBody, {
     fieldPath: emailOverride?.html_body !== undefined
       ? "email_override.html_body"
       : "html_body",
@@ -168,7 +183,7 @@ export async function resolveInvitationEmailContent(
 
   return {
     subject,
-    html_body: htmlBody,
+    html_body: sanitizedHtmlBody,
     used_default_subject: emailOverride?.subject === undefined,
     used_default_html_body: emailOverride?.html_body === undefined,
     default_template_uuid: defaultTemplate?.uuid ?? null,
