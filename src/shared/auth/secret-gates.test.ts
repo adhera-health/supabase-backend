@@ -10,7 +10,7 @@
 import { assertEquals, assertRejects } from "@std/assert";
 import type { Context } from "hono";
 import { assertLicenseReservationSecret } from "@shared/auth/license-reservation-auth.ts";
-import { assertReminderCronAuth } from "@shared/auth/reminder-cron-auth.ts";
+import { assertCronAuth } from "@shared/auth/cron-auth.ts";
 import { AppError, ForbiddenError, UnauthorizedError } from "@shared/utils/errors.ts";
 import { timingSafeEqualStrings } from "@shared/utils/secret-compare.ts";
 
@@ -58,10 +58,10 @@ async function withEnv(
 
 const GATES = [
   {
-    name: "reminder cron",
-    secretVar: "REMINDER_CRON_SECRET",
-    header: "x-reminder-cron-secret",
-    assert: assertReminderCronAuth,
+    name: "cron",
+    secretVar: "CRON_SECRET",
+    header: "x-cron-secret",
+    assert: assertCronAuth,
   },
   {
     name: "license reservation",
@@ -119,11 +119,11 @@ for (const gate of GATES) {
   });
 }
 
-Deno.test("reminder cron gate accepts the secret via Authorization: Bearer", async () => {
+Deno.test("cron gate accepts the secret via Authorization: Bearer", async () => {
   await withEnv(
-    { REMINDER_CRON_SECRET: SECRET, ENVIRONMENT: "development" },
+    { CRON_SECRET: SECRET, ENVIRONMENT: "development" },
     async () => {
-      await assertReminderCronAuth(
+      await assertCronAuth(
         stubContext({ Authorization: `Bearer ${SECRET}` }),
       );
     },
