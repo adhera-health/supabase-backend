@@ -10,9 +10,10 @@
 -- `service_role` has BYPASSRLS and is granted explicitly below.
 --
 --   1. RLS on every table, with no policies → default deny for anon/authenticated.
---   2. EXECUTE revoked on every public function (SEC-32 — see below).
---   3. Table/sequence privileges revoked from the Data API roles.
---   4. Default privileges changed so FUTURE objects inherit all of the above.
+--   2. RLS force-enabled, so the table owner isn't implicitly exempt either.
+--   3. EXECUTE revoked on every public function (SEC-32 — see below).
+--   4. Table/sequence privileges revoked from the Data API roles.
+--   5. Default privileges changed so FUTURE objects inherit all of the above.
 --
 -- Step 4 is the important one: the original risk was never today's grants, it was
 -- that one future migration or one Studio-created table could expose everything.
@@ -62,7 +63,37 @@ BEGIN
 END $$;
 
 -- ---------------------------------------------------------------------------
--- 2. Revoke EXECUTE on every public function; re-grant to the service role.
+-- 2. Force RLS, so the table owner isn't implicitly exempt either.
+--
+-- By default a table's owner bypasses RLS regardless of superuser status --
+-- migrations here run as `postgres`, which owns every table and does not have
+-- BYPASSRLS on hosted Supabase, so without FORCE it would sail through step 1's
+-- default-deny untouched. service_role is unaffected either way (it has
+-- BYPASSRLS, which always wins over FORCE). Applied unconditionally rather than
+-- filtered like step 1, so it stays idempotent and correct even if only this
+-- step is re-run after a new table is added.
+-- ---------------------------------------------------------------------------
+DO $$
+DECLARE
+  target record;
+BEGIN
+  FOR target IN
+    SELECT c.relname
+    FROM pg_class c
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public'
+      AND c.relkind = 'r'
+      AND NOT EXISTS (
+        SELECT 1 FROM pg_depend d
+        WHERE d.objid = c.oid AND d.deptype = 'e'
+      )
+  LOOP
+    EXECUTE format('ALTER TABLE public.%I FORCE ROW LEVEL SECURITY', target.relname);
+  END LOOP;
+END $$;
+
+-- ---------------------------------------------------------------------------
+-- 3. Revoke EXECUTE on every public function; re-grant to the service role.
 --
 -- Revoking FROM PUBLIC removes the implicit default grant; the explicit grant to
 -- service_role then restores access for the only caller that should have it.
@@ -105,7 +136,7 @@ BEGIN
 END $$;
 
 -- ---------------------------------------------------------------------------
--- 3. Revoke table and sequence privileges from the Data API roles.
+-- 4. Revoke table and sequence privileges from the Data API roles.
 --
 -- Expected to be a no-op on a correctly configured project — this is the belt to
 -- step 1's braces, and it makes the intent explicit and auditable.
@@ -123,7 +154,7 @@ BEGIN
 END $$;
 
 -- ---------------------------------------------------------------------------
--- 4. Future objects: deny by default.
+-- 5. Future objects: deny by default.
 --
 -- ALTER DEFAULT PRIVILEGES applies to objects created by the role that runs it
 -- (migrations run as `postgres`), so a future migration cannot silently re-expose
@@ -158,7 +189,7 @@ BEGIN
 END $$;
 
 -- ---------------------------------------------------------------------------
--- 5. Re-affirm service role access (mirrors 20260710130000).
+-- 6. Re-affirm service role access (mirrors 20260710130000).
 -- ---------------------------------------------------------------------------
 DO $$
 BEGIN
@@ -173,12 +204,16 @@ BEGIN
 END $$;
 
 -- ---------------------------------------------------------------------------
--- Verification — run after applying. Every row of the first two queries should be
--- empty; the third should list only `service_role`.
+-- Verification — run after applying. Every row of the first three queries should
+-- be empty; the fourth should list only `service_role`.
 --
 --   -- (a) tables without RLS:
 --   SELECT c.relname FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
 --   WHERE n.nspname = 'public' AND c.relkind = 'r' AND NOT c.relrowsecurity;
+--
+--   -- (a2) tables with RLS enabled but not forced:
+--   SELECT c.relname FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+--   WHERE n.nspname = 'public' AND c.relkind = 'r' AND c.relrowsecurity AND NOT c.relforcerowsecurity;
 --
 --   -- (b) any table privilege still held by the Data API roles:
 --   SELECT grantee, table_name, privilege_type FROM information_schema.role_table_grants
