@@ -75,6 +75,16 @@ const TOKEN_STATE_MESSAGES: Record<string, string> = {
   invalid: "Invitation token is invalid",
 };
 
+/**
+ * Shared by signInPatient's wrong-password path and establishPatientSession's
+ * other-creation-failure path (SEC-13): a caller must not be able to tell "this
+ * email already has an account and the password was wrong" apart from "this is
+ * a new account and creation failed for some other reason" from the response
+ * alone, since the former would confirm the invitation's email already has an
+ * account.
+ */
+const ONBOARDING_CREDENTIALS_ERROR_MESSAGE = "Invalid email or password for this invitation";
+
 function isExistingUserError(message: string): boolean {
   const normalized = message.toLowerCase();
   return (
@@ -96,7 +106,7 @@ async function signInPatient(
     .signInWithPassword({ email, password });
 
   if (signInError || !sessionData.session || !sessionData.user) {
-    throw new UnauthorizedError("Invalid email or password for this invitation");
+    throw new UnauthorizedError(ONBOARDING_CREDENTIALS_ERROR_MESSAGE);
   }
 
   const session = sessionData.session;
@@ -141,11 +151,11 @@ async function establishPatientSession(
   }
 
   if (createError) {
-    throw new AppError("Unable to create patient account", {
-      statusCode: 400,
-      code: "BAD_REQUEST",
-      cause: { authMessage: createError.message },
+    logger.warn("complete-onboarding account creation failed for a non-existing-user reason", {
+      invitation_id: invitationId,
+      auth_message: createError.message,
     });
+    throw new UnauthorizedError(ONBOARDING_CREDENTIALS_ERROR_MESSAGE);
   }
 
   throw new AppError("Unable to create patient account", {
