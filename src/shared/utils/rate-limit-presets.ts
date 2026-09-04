@@ -143,10 +143,11 @@ export async function assertCompleteOnboardingRateLimit(clientIp: string): Promi
 /**
  * License reservation lookup by email — per client IP (SEC-12).
  * Machine-to-machine route returning PII keyed on email, so the cap is deliberately
- * low: it exists to blunt enumeration, not to serve interactive traffic.
+ * low: it exists to blunt bulk scraping/enumeration across many addresses from one
+ * source, not to serve interactive traffic.
  */
-export function assertLicenseReservationLookupRateLimit(clientIp: string): void {
-  assertRateLimit({
+export async function assertLicenseReservationLookupRateLimit(clientIp: string): Promise<void> {
+  await assertRateLimit({
     key: `license-reservation-lookup:${clientIp}`,
     max: parsePositiveInt(Deno.env.get("RATE_LIMIT_LICENSE_LOOKUP_MAX"), 20),
     windowMs: parsePositiveInt(

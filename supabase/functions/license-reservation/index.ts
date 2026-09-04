@@ -80,7 +80,7 @@ async function handleGetLicenseReservationByEmail(c: Context)
     const logger = createLogger("license-reservation");
     const actorIp = getClientIp(c) ?? "unknown";
 
-    assertLicenseReservationLookupRateLimit(actorIp);
+    await assertLicenseReservationLookupRateLimit(actorIp);
 
     const input = parseSchema(getLicenseReservationByEmailSchema, await parseJsonBody(c));
 

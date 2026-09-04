@@ -7,7 +7,10 @@
  */
 
 import { assertEquals, assertRejects } from "@std/assert";
-import { assertOnboardingSignInRateLimit } from "@shared/utils/rate-limit-presets.ts";
+import {
+  assertLicenseReservationLookupRateLimit,
+  assertOnboardingSignInRateLimit,
+} from "@shared/utils/rate-limit-presets.ts";
 import { RateLimitError } from "@shared/utils/errors.ts";
 import { getServiceClient } from "@shared/database/client.ts";
 
@@ -21,6 +24,17 @@ async function cleanupInvitation(invitationId: number): Promise<void> {
     .from("rate_limits")
     .delete()
     .eq("key", `onboarding-signin:${invitationId}`);
+}
+
+function uniqueLookupIp(): string {
+  return `203.0.113.${Math.floor(Math.random() * 255)}-${Date.now()}`;
+}
+
+async function cleanupLicenseLookup(clientIp: string): Promise<void> {
+  await getServiceClient()
+    .from("rate_limits")
+    .delete()
+    .eq("key", `license-reservation-lookup:${clientIp}`);
 }
 
 Deno.test("assertOnboardingSignInRateLimit allows attempts up to the configured max", async () => {
@@ -99,5 +113,64 @@ Deno.test("assertOnboardingSignInRateLimit defaults to 5 attempts per 30 minutes
     );
   } finally {
     await cleanupInvitation(invitationId);
+  }
+});
+
+Deno.test("assertLicenseReservationLookupRateLimit allows attempts up to the configured max", async () => {
+  const clientIp = uniqueLookupIp();
+  Deno.env.set("RATE_LIMIT_LICENSE_LOOKUP_MAX", "3");
+  Deno.env.set("RATE_LIMIT_LICENSE_LOOKUP_WINDOW_MS", "60000");
+  try {
+    for (let i = 0; i < 3; i++) {
+      await assertLicenseReservationLookupRateLimit(clientIp);
+    }
+  } finally {
+    await cleanupLicenseLookup(clientIp);
+    Deno.env.delete("RATE_LIMIT_LICENSE_LOOKUP_MAX");
+    Deno.env.delete("RATE_LIMIT_LICENSE_LOOKUP_WINDOW_MS");
+  }
+});
+
+Deno.test("assertLicenseReservationLookupRateLimit rejects once the max is exceeded for one IP", async () => {
+  const clientIp = uniqueLookupIp();
+  Deno.env.set("RATE_LIMIT_LICENSE_LOOKUP_MAX", "3");
+  Deno.env.set("RATE_LIMIT_LICENSE_LOOKUP_WINDOW_MS", "60000");
+  try {
+    for (let i = 0; i < 3; i++) {
+      await assertLicenseReservationLookupRateLimit(clientIp);
+    }
+
+    await assertRejects(
+      () => assertLicenseReservationLookupRateLimit(clientIp),
+      RateLimitError,
+      "Too many requests",
+    );
+  } finally {
+    await cleanupLicenseLookup(clientIp);
+    Deno.env.delete("RATE_LIMIT_LICENSE_LOOKUP_MAX");
+    Deno.env.delete("RATE_LIMIT_LICENSE_LOOKUP_WINDOW_MS");
+  }
+});
+
+Deno.test("assertLicenseReservationLookupRateLimit budgets are independent per IP", async () => {
+  const ipA = uniqueLookupIp();
+  const ipB = uniqueLookupIp();
+  Deno.env.set("RATE_LIMIT_LICENSE_LOOKUP_MAX", "1");
+  Deno.env.set("RATE_LIMIT_LICENSE_LOOKUP_WINDOW_MS", "60000");
+  try {
+    await assertLicenseReservationLookupRateLimit(ipA);
+
+    await assertRejects(
+      () => assertLicenseReservationLookupRateLimit(ipA),
+      RateLimitError,
+    );
+
+    // A different IP's budget must be untouched by A's exhaustion.
+    await assertLicenseReservationLookupRateLimit(ipB);
+  } finally {
+    await cleanupLicenseLookup(ipA);
+    await cleanupLicenseLookup(ipB);
+    Deno.env.delete("RATE_LIMIT_LICENSE_LOOKUP_MAX");
+    Deno.env.delete("RATE_LIMIT_LICENSE_LOOKUP_WINDOW_MS");
   }
 });
