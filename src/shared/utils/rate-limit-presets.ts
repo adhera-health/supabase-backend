@@ -141,6 +141,23 @@ export async function assertCompleteOnboardingRateLimit(clientIp: string): Promi
 }
 
 /**
+ * License reservation lookup by email — per client IP (SEC-12).
+ * Machine-to-machine route returning PII keyed on email, so the cap is deliberately
+ * low: it exists to blunt bulk scraping/enumeration across many addresses from one
+ * source, not to serve interactive traffic.
+ */
+export async function assertLicenseReservationLookupRateLimit(clientIp: string): Promise<void> {
+  await assertRateLimit({
+    key: `license-reservation-lookup:${clientIp}`,
+    max: parsePositiveInt(Deno.env.get("RATE_LIMIT_LICENSE_LOOKUP_MAX"), 20),
+    windowMs: parsePositiveInt(
+      Deno.env.get("RATE_LIMIT_LICENSE_LOOKUP_WINDOW_MS"),
+      60_000,
+      ),
+  });
+}
+
+/*
  * Complete-onboarding password sign-in — per invitation, independent of the
  * per-IP endpoint limit above. Bounds password-guessing against an existing
  * account (OWASP: onboarding doubles as a login oracle for existing

@@ -3,6 +3,7 @@
  */
 
 import type { InvitationLicenseSnapshot } from "@domain/license-snapshot.ts";
+import { isProductionEnvironment } from "@shared/utils/environment.ts";
 import { AppError } from "@shared/utils/errors.ts";
 
 function parsePositiveInt(value: string | undefined, label: string): number | null {
@@ -73,7 +74,7 @@ export async function resolveInvitationLicenseSnapshot(
   const fromEnv = resolveFromEnv();
   if (fromEnv) return fromEnv;
 
-  if (Deno.env.get("ENVIRONMENT") !== "production") {
+  if (!isProductionEnvironment()) {
     const devSnapshot = resolveDevAdminMapping(clientId, programId);
     if (devSnapshot) return devSnapshot;
 

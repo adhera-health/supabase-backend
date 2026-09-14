@@ -8,6 +8,7 @@ import {
   isResendConfigured,
   sendResendEmail,
 } from "@shared/utils/resend.ts";
+import { isProductionEnvironment } from "@shared/utils/environment.ts";
 import { AppError } from "@shared/utils/errors.ts";
 import { createOptOutToken } from "@shared/utils/opt-out-token.ts";
 import { createLogger } from "@shared/utils/logger.ts";
@@ -103,7 +104,7 @@ export async function sendReminderEmail(
   input: SendReminderEmailInput,
 ): Promise<ReminderEmailResult> {
   const resendConfigured = isResendConfigured();
-  const isProduction = Deno.env.get("ENVIRONMENT") === "production";
+  const isProduction = isProductionEnvironment();
 
   if (!resendConfigured) {
     if (isProduction) {

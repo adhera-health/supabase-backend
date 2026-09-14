@@ -4,6 +4,7 @@
  */
 
 import { getRequestCorrelationId } from "./correlation-context.ts";
+import { isProductionEnvironment } from "./environment.ts";
 
 export type LogLevel =
   | "debug"
@@ -60,9 +61,7 @@ function getMinLevel(): LogLevel {
   }
 
   return (
-    Deno.env.get(
-      "ENVIRONMENT",
-    ) === "production"
+    isProductionEnvironment()
       ? "info"
       : "debug"
   );

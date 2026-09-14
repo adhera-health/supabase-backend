@@ -23,6 +23,7 @@ import {
   validateInvitationToken,
   resendInvitationToken,
 } from "@shared/services/invitation.service.ts";
+import { isDevelopmentEnvironment } from "@shared/utils/environment.ts";
 import { BadRequestError } from "@shared/utils/errors.ts";
 import { createHonoApp } from "@shared/utils/hono.ts";
 import type { Context } from "hono";
@@ -114,7 +115,7 @@ function logOnboardingTokenInDevelopmentOnly(
   logger.info(message, {
     invitation_uuid: invitationUuid,
     token_expires_in_hours: 72,
-    ...(Deno.env.get("ENVIRONMENT") === "development" && {
+    ...(isDevelopmentEnvironment() && {
       onboarding_token: onboardingToken,
     }),
   });

@@ -2,6 +2,7 @@
  * CORS resolution for edge functions — production allowlist with dev fallback.
  */
 
+import { isProductionEnvironment } from "@shared/utils/environment.ts";
 import { AppError, ForbiddenError } from "@shared/utils/errors.ts";
 
 const CORS_ALLOW_HEADERS =
@@ -10,10 +11,6 @@ const CORS_ALLOW_HEADERS =
 const CORS_EXPOSE_HEADERS = "X-Correlation-ID";
 
 const CORS_ALLOW_METHODS = "GET, POST, PUT, PATCH, DELETE, OPTIONS";
-
-export function isProductionEnvironment(): boolean {
-  return Deno.env.get("ENVIRONMENT") === "production";
-}
 
 /** Parses comma-separated origins from ALLOWED_CORS_ORIGINS. */
 export function getAllowedCorsOrigins(): string[] {

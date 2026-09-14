@@ -32,7 +32,7 @@ const app = createHonoApp().basePath(`/${FUNCTION_NAME}`);
 async function handleRunReminders(c: Context) {
   const logger = createLogger("reminders");
 
-  assertCronAuth(c);
+  await assertCronAuth(c);
 
   let body: unknown = {};
   if (c.req.header("content-length") && c.req.header("content-length") !== "0") {

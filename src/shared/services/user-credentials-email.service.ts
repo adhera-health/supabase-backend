@@ -3,6 +3,10 @@
  */
 
 import type { DashboardStaffRole } from "@domain/user.ts";
+import {
+  isDevelopmentEnvironment,
+  isProductionEnvironment,
+} from "@shared/utils/environment.ts";
 import { AppError } from "@shared/utils/errors.ts";
 import { createLogger } from "@shared/utils/logger.ts";
 import {
@@ -55,7 +59,7 @@ export async function sendUserCredentialsEmail(
   input: SendUserCredentialsEmailInput,
 ): Promise<UserCredentialsEmailResult> {
   const resendConfigured = isResendConfigured();
-  const isProduction = Deno.env.get("ENVIRONMENT") === "production";
+  const isProduction = isProductionEnvironment();
 
   if (!resendConfigured) {
     if (isProduction) {
@@ -69,7 +73,7 @@ export async function sendUserCredentialsEmail(
       to: input.to,
       role: input.role,
       dev_hint: DEV_RESEND_SETUP_HINT,
-      ...(Deno.env.get("ENVIRONMENT") === "development" && {
+      ...(isDevelopmentEnvironment() && {
         generated_password: input.password,
       }),
     });
