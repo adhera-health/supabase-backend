@@ -58,6 +58,9 @@ deno task run:rate-limits-cleanup # Run rate_limits cleanup manually (dev)
 # Unit tests
 deno test --allow-env src/shared/auth/rbac.test.ts src/integrations/license/auth0.test.ts
 
+# Secret-gate call sites (scans supabase/functions for unawaited async gates)
+deno test --allow-read src/shared/auth/secret-gate-call-sites.test.ts
+
 # Rate limiter integration tests (Postgres-backed; requires `supabase start`)
 deno test --env-file=.env --allow-env --allow-net src/shared/utils/rate-limit.test.ts
 
