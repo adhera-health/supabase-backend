@@ -176,6 +176,12 @@ async function handleListClientPrograms(c: Context) {
 async function handleSendInvitation(c: Context) {
   const logger = createLogger("invitations");
 
+  const actor = await requirePermission(
+    c.req.header("Authorization"),
+    PERMISSIONS.INVITATIONS_SEND,
+  );
+  await assertAdminActionRateLimit(actor.id, "invitation_send");
+
   let body: unknown;
   try {
     body = await c.req.json();
@@ -184,11 +190,6 @@ async function handleSendInvitation(c: Context) {
   }
 
   const input = parseSchema(createInvitationSchema, body);
-  const actor = await requirePermission(
-    c.req.header("Authorization"),
-    PERMISSIONS.INVITATIONS_SEND,
-  );
-  await assertAdminActionRateLimit(actor.id, "invitation_send");
   const adminScope = resolveAdminScope(actor);
   const invitedByUserId = actor.id;
   const actorIp = getClientIp(c);
@@ -298,6 +299,12 @@ async function handleValidateToken(c: Context) {
 async function handleResendInvitation(c: Context) {
   const logger = createLogger("invitations");
 
+  const actor = await requirePermission(
+    c.req.header("Authorization"),
+    PERMISSIONS.INVITATIONS_RESEND,
+  );
+  await assertAdminActionRateLimit(actor.id, "invitation_resend");
+
   const params = parseSchema(resendInvitationParamsSchema, {
     invitation_id: c.req.param("invitation_id"),
   });
@@ -312,12 +319,6 @@ async function handleResendInvitation(c: Context) {
   const parsedBody = body !== undefined
     ? parseSchema(resendInvitationBodySchema, body)
     : undefined;
-
-  const actor = await requirePermission(
-    c.req.header("Authorization"),
-    PERMISSIONS.INVITATIONS_RESEND,
-  );
-  await assertAdminActionRateLimit(actor.id, "invitation_resend");
   const actorIp = getClientIp(c);
 
   logger.info("Resending invitation", {
@@ -422,6 +423,12 @@ async function handleListInvitations(c: Context) {
 async function handleDropOutInvitation(c: Context) {
   const logger = createLogger("invitations");
 
+  const actor = await requirePermission(
+    c.req.header("Authorization"),
+    PERMISSIONS.INVITATIONS_DROP_OUT,
+  );
+  await assertAdminActionRateLimit(actor.id, "invitation_drop_out");
+
   const params = parseSchema(dropOutInvitationParamsSchema, {
     invitation_id: c.req.param("invitation_id"),
   });
@@ -434,11 +441,6 @@ async function handleDropOutInvitation(c: Context) {
   }
 
   const input = parseSchema(dropOutInvitationBodySchema, body);
-  const actor = await requirePermission(
-    c.req.header("Authorization"),
-    PERMISSIONS.INVITATIONS_DROP_OUT,
-  );
-  await assertAdminActionRateLimit(actor.id, "invitation_drop_out");
   const recordedByUserId = actor.id;
   const actorIp = getClientIp(c);
 

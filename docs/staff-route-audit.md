@@ -32,15 +32,15 @@ longer stops the request (see `fix/await-secret-guards`, commit `52a039c`).
 | `POST /email-templates/` | `requirePermission(EMAIL_TEMPLATES_MANAGE)` | yes (:104) | none |
 | `PATCH /email-templates/:template_uuid` | `requirePermission(EMAIL_TEMPLATES_MANAGE)` | yes (:141) | none |
 | `DELETE /email-templates/:template_uuid` | `requirePermission(EMAIL_TEMPLATES_MANAGE)` | yes (:178) | none |
-| `GET /invitations/` and `GET /invitations` | `requireAnyPermission(INVITATIONS_VIEW_ALL, _VIEW_OWN)` | yes (:386) | none |
+| `GET /invitations/` and `GET /invitations` | `requireAnyPermission(INVITATIONS_VIEW_ALL, _VIEW_OWN)` | yes (:387) | none |
 | `GET /invitations/clients` | `requirePermission(INVITATIONS_CLIENTS_LIST)` | yes (:132) | none |
 | `GET /invitations/clients/:clientId/programs` | `requirePermission(INVITATIONS_CLIENTS_LIST)` | yes (:154) | none (param parsed first) |
-| `POST /invitations/send` | `requirePermission(INVITATIONS_SEND)` | yes (:187) | none (body parsed first — see F1) |
+| `POST /invitations/send` | `requirePermission(INVITATIONS_SEND)` | yes (:179) | none (auth runs first — F1 fixed) |
 | `GET /invitations/validate-token` | **public by design** (patient opens the emailed link) | n/a | none; IP rate limit first |
-| `POST /invitations/:invitation_id/resend` | `requirePermission(INVITATIONS_RESEND)` | yes (:316) | none (params + body parsed first — F1) |
-| `GET /invitations/:invitation_id/attention-reasons` | `requirePermission(INVITATIONS_ATTENTION_REASONS_VIEW)` | yes (:514) | none |
-| `GET /invitations/:invitation_id` | `requireAnyPermission(INVITATIONS_VIEW_ALL, _VIEW_OWN)` | yes (:490) | none |
-| `POST /invitations/:invitation_id/drop-out` | `requirePermission(INVITATIONS_DROP_OUT)` | yes (:437) | none (params + body parsed first — F1) |
+| `POST /invitations/:invitation_id/resend` | `requirePermission(INVITATIONS_RESEND)` | yes (:302) | none (auth runs first — F1 fixed) |
+| `GET /invitations/:invitation_id/attention-reasons` | `requirePermission(INVITATIONS_ATTENTION_REASONS_VIEW)` | yes (:516) | none |
+| `GET /invitations/:invitation_id` | `requireAnyPermission(INVITATIONS_VIEW_ALL, _VIEW_OWN)` | yes (:492) | none |
+| `POST /invitations/:invitation_id/drop-out` | `requirePermission(INVITATIONS_DROP_OUT)` | yes (:426) | none (auth runs first — F1 fixed) |
 | `POST /reminders/run` | `assertCronAuth` (shared secret) | yes (:36) | none |
 | `GET /reminders/logs` | `requireAnyPermission(INVITATIONS_VIEW_ALL, _VIEW_OWN)` | yes (:67) | none |
 
@@ -63,13 +63,15 @@ JWT check does not change its exposure, since the gateway only ever required
 
 ## Findings
 
-- **F1 (low, ordering).** `POST /invitations/send`, `POST /:invitation_id/resend`
-  and `POST /:invitation_id/drop-out` parse the request body *before*
-  authenticating, so an unauthenticated caller can receive 400 validation
-  errors instead of 401. No data is read or written, so this is not an access
-  issue — it just discloses schema shape and spends parsing effort on
-  unauthenticated requests. Fix by moving the auth call above body parsing.
-  Not changed here to keep this task to an audit.
+- **F1 (low, ordering) — FIXED 2026-09-16.** `POST /invitations/send`,
+  `POST /:invitation_id/resend` and `POST /:invitation_id/drop-out` parsed the
+  request body *before* authenticating, so an unauthenticated caller received
+  400 validation errors instead of 401 and spent server-side parsing on an
+  unauthenticated request. No data was read or written, so this was never an
+  access issue — it disclosed schema shape. The auth call (and its
+  actor-keyed rate limit) now runs first in all three handlers, guarded by
+  `src/shared/auth/invitations-auth-order.test.ts`, which fails if any
+  invitations handler reads the body before authenticating.
 - **F2 (informational).** `rate-limits-cleanup` had an un-awaited
   `assertCronAuth`; fixed on `develop` by PR #10. This audit branch was cut
   from `develop` *before* that merge, so the file still shows the old line
@@ -84,6 +86,8 @@ JWT check does not change its exposure, since the gateway only ever required
 
 `verify_jwt = false` is safe for `analytics`, `consent-documents`,
 `email-templates`, `invitations` and `reminders` once the staff auth entry
-point lands (bridge spec, Phase 5), provided F1 is addressed or accepted and a
-regression test keeps every guard awaited
-(`src/shared/auth/secret-gate-call-sites.test.ts` covers the secret gates).
+point lands (bridge spec, Phase 5). Every route in them authenticates before
+touching data, F1 is fixed, and two source-scanning tests keep it that way:
+`src/shared/auth/secret-gate-call-sites.test.ts` (every async secret gate is
+awaited) and `src/shared/auth/invitations-auth-order.test.ts` (auth precedes
+body reads).
