@@ -19,7 +19,7 @@ const app = createHonoApp().basePath(`/${FUNCTION_NAME}`);
 async function handleRunCleanup(c: Context) {
   const logger = createLogger("rate-limits-cleanup");
 
-  assertCronAuth(c);
+  await assertCronAuth(c);
 
   const cleanup = await cleanupStaleRateLimits();
 
