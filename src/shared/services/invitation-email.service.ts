@@ -53,7 +53,11 @@ export async function sendInvitationEmail(
   input: SendInvitationEmailInput,
 ): Promise<InvitationEmailResult> {
   // Validate default template + overrides even when Resend is disabled (local dev).
-  const resolved = await resolveInvitationEmailContent(input.contentOverride);
+  // The invitation's client owns its template; the shared one is the fallback.
+  const resolved = await resolveInvitationEmailContent(
+    input.contentOverride,
+    input.clientId,
+  );
 
   const resendConfigured = isResendConfigured();
   const isProduction = isProductionEnvironment();

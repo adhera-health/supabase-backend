@@ -13,6 +13,8 @@ export interface EmailTemplateRow {
   uuid: string;
   name: string;
   template_type: EmailTemplateType;
+  /** Adhera Core client id (text) owning this template; null = shared fallback. */
+  client_id: string | null;
   subject: string;
   html_body: string;
   is_default: boolean;
@@ -25,6 +27,8 @@ export interface EmailTemplateResource {
   template_uuid: string;
   name: string;
   template_type: EmailTemplateType;
+  /** Client this template belongs to; null = shared fallback. */
+  client_id: string | null;
   subject: string;
   html_body: string;
   is_default: boolean;
@@ -35,6 +39,8 @@ export interface EmailTemplateResource {
 export interface CreateEmailTemplateInput {
   name: string;
   template_type: EmailTemplateType;
+  /** Omit (or null) to create/replace the shared fallback template. */
+  client_id?: string | null;
   subject: string;
   html_body: string;
   is_default?: boolean;

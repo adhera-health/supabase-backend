@@ -6,12 +6,13 @@ import {
   clearDefaultEmailTemplate,
   countEmailTemplatesByType,
   deleteEmailTemplateRow,
-  getDefaultEmailTemplateRow,
   getEmailTemplateByUuid,
   insertEmailTemplateRow,
+  listDefaultEmailTemplateRows,
   listEmailTemplateRows,
   updateEmailTemplateRow,
 } from "@shared/database/queries/email-template.query.ts";
+import { pickDefaultTemplate } from "@shared/services/email-template-resolution.ts";
 import {
   BadRequestError,
   ConflictError,
@@ -40,6 +41,7 @@ function toEmailTemplateResource(row: EmailTemplateRow): EmailTemplateResource {
     template_uuid: row.uuid,
     name: row.name,
     template_type: row.template_type,
+    client_id: row.client_id,
     subject: row.subject,
     html_body: row.html_body,
     is_default: row.is_default,
@@ -65,10 +67,15 @@ export async function getEmailTemplate(
   return { template: toEmailTemplateResource(row) };
 }
 
+/** The client's own default when it has one, else the shared fallback. */
 export async function getDefaultEmailTemplate(
   templateType: EmailTemplateType,
+  clientId?: string | null,
 ): Promise<GetEmailTemplateResponse> {
-  const row = await getDefaultEmailTemplateRow(templateType);
+  const row = pickDefaultTemplate(
+    await listDefaultEmailTemplateRows(templateType),
+    clientId,
+  );
   if (!row) {
     throw new NotFoundError("Default email template not found");
   }
@@ -79,9 +86,10 @@ export async function createEmailTemplate(
   input: CreateEmailTemplateInput,
 ): Promise<CreateEmailTemplateResponse> {
   const isDefault = input.is_default ?? false;
+  const clientId = input.client_id ?? null;
 
   if (isDefault) {
-    await clearDefaultEmailTemplate(input.template_type);
+    await clearDefaultEmailTemplate(input.template_type, clientId);
   }
 
   const sanitizedHtmlBody = sanitizeInvitationEmailHtmlBody(input.html_body);
@@ -89,6 +97,7 @@ export async function createEmailTemplate(
   const row = await insertEmailTemplateRow({
     name: input.name,
     template_type: input.template_type,
+    client_id: clientId,
     subject: input.subject,
     html_body: sanitizedHtmlBody,
     is_default: isDefault,
@@ -107,7 +116,11 @@ export async function updateEmailTemplate(
   }
 
   if (input.is_default === true) {
-    await clearDefaultEmailTemplate(existing.template_type, existing.id);
+    await clearDefaultEmailTemplate(
+      existing.template_type,
+      existing.client_id,
+      existing.id,
+    );
   }
 
   if (input.is_default === false && existing.is_default) {
@@ -151,14 +164,20 @@ export async function deleteEmailTemplate(
 }
 
 /**
- * Merge DB default with optional per-send overrides.
- * Overrides are never persisted to email_templates.
+ * Merge the stored default with optional per-send overrides.
+ *
+ * The default is the invitation client's own template when it has one, else the
+ * shared fallback. Overrides are never persisted to email_templates.
  */
 export async function resolveInvitationEmailContent(
   override?: InvitationEmailContentOverride,
+  clientId?: string | null,
 ): Promise<ResolvedInvitationEmailContent> {
   const emailOverride = override?.email_override;
-  const defaultTemplate = await getDefaultEmailTemplateRow("invitation");
+  const defaultTemplate = pickDefaultTemplate(
+    await listDefaultEmailTemplateRows("invitation"),
+    clientId,
+  );
 
   if (!defaultTemplate && !emailOverride?.subject && !emailOverride?.html_body) {
     throw new NotFoundError("Default invitation email template not found");

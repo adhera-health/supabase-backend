@@ -13,7 +13,7 @@ import type {
 } from "@domain/email-template.ts";
 
 const EMAIL_TEMPLATE_COLUMNS =
-  "id, uuid, name, template_type, subject, html_body, is_default, created_at, updated_at";
+  "id, uuid, name, template_type, client_id, subject, html_body, is_default, created_at, updated_at";
 
 function toEmailTemplateRow(row: Record<string, unknown>): EmailTemplateRow {
   return {
@@ -21,6 +21,7 @@ function toEmailTemplateRow(row: Record<string, unknown>): EmailTemplateRow {
     uuid: row.uuid as string,
     name: row.name as string,
     template_type: row.template_type as EmailTemplateType,
+    client_id: (row.client_id as string | null) ?? null,
     subject: row.subject as string,
     html_body: row.html_body as string,
     is_default: row.is_default as boolean,
@@ -80,28 +81,38 @@ export async function getEmailTemplateByUuid(
   return toEmailTemplateRow(data as Record<string, unknown>);
 }
 
-export async function getDefaultEmailTemplateRow(
+/**
+ * Every default of this type: at most one per client plus the shared one.
+ *
+ * Callers pick the right one with `pickDefaultTemplate` (client first, then
+ * shared). Fetching them all keeps this a plain equality query — building an
+ * `.or(client_id.is.null,client_id.eq.X)` filter would interpolate a tenant id
+ * into PostgREST filter syntax — and the set is one row per client at most.
+ */
+export async function listDefaultEmailTemplateRows(
   templateType: EmailTemplateType,
-): Promise<EmailTemplateRow | null> {
+): Promise<EmailTemplateRow[]> {
   const db = getServiceClient();
   const { data, error } = await db
     .from("email_templates")
     .select(EMAIL_TEMPLATE_COLUMNS)
     .eq("template_type", templateType)
-    .eq("is_default", true)
-    .maybeSingle();
+    .eq("is_default", true);
 
   if (error) {
     raiseEmailTemplateDbError("Failed to load default email template", error);
   }
-  if (!data) return null;
 
-  return toEmailTemplateRow(data as Record<string, unknown>);
+  return (data ?? []).map((row) =>
+    toEmailTemplateRow(row as Record<string, unknown>)
+  );
 }
 
 export interface InsertEmailTemplateRowInput {
   name: string;
   template_type: EmailTemplateType;
+  /** null = shared fallback template. */
+  client_id: string | null;
   subject: string;
   html_body: string;
   is_default: boolean;
@@ -116,6 +127,7 @@ export async function insertEmailTemplateRow(
     .insert({
       name: input.name,
       template_type: input.template_type,
+      client_id: input.client_id,
       subject: input.subject,
       html_body: input.html_body,
       is_default: input.is_default,
@@ -129,7 +141,7 @@ export async function insertEmailTemplateRow(
       raiseEmailTemplateDbError(
         "Failed to create email template",
         error,
-        "A default template already exists for this type",
+        "A default template already exists for this type and client",
       );
     }
     raiseEmailTemplateDbError("Failed to create email template", error);
@@ -138,8 +150,13 @@ export async function insertEmailTemplateRow(
   return toEmailTemplateRow(data as Record<string, unknown>);
 }
 
+/**
+ * Clears the current default for one client only (or the shared one when
+ * `clientId` is null), so one client's change never unsets another's.
+ */
 export async function clearDefaultEmailTemplate(
   templateType: EmailTemplateType,
+  clientId: string | null,
   exceptTemplateId?: number,
 ): Promise<void> {
   const db = getServiceClient();
@@ -151,6 +168,10 @@ export async function clearDefaultEmailTemplate(
     })
     .eq("template_type", templateType)
     .eq("is_default", true);
+
+  query = clientId === null
+    ? query.is("client_id", null)
+    : query.eq("client_id", clientId);
 
   if (exceptTemplateId !== undefined) {
     query = query.neq("id", exceptTemplateId);
@@ -196,7 +217,7 @@ export async function updateEmailTemplateRow(
       raiseEmailTemplateDbError(
         "Failed to update email template",
         error,
-        "A default template already exists for this type",
+        "A default template already exists for this type and client",
       );
     }
     raiseEmailTemplateDbError("Failed to update email template", error);
