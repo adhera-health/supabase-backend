@@ -9,6 +9,7 @@ import { requireAnyPermission } from "@shared/auth/authorization.ts";
 import { PERMISSIONS } from "@shared/auth/permissions.ts";
 import { runDueOnboardingReminders } from "@shared/services/reminder.service.ts";
 import { listReminderLogs } from "@shared/database/queries/reminder.query.ts";
+import { buildReminderLogFilters } from "@shared/services/reminder-log-scope.ts";
 import { BadRequestError } from "@shared/utils/errors.ts";
 import { createHonoApp } from "@shared/utils/hono.ts";
 import type { Context } from "hono";
@@ -80,11 +81,9 @@ async function handleListReminderLogs(c: Context) {
     page: input.page,
   });
 
-  const { rows, total } = await listReminderLogs({
-    invitationUuid: input.invitation_id,
-    page: input.page,
-    perPage: input.per_page,
-  });
+  const { rows, total } = await listReminderLogs(
+    buildReminderLogFilters(actor, input),
+  );
 
   const logs: ReminderLogResource[] = rows.map((row) => ({
     invitation_uuid: row.patient_invitations?.uuid ?? "",

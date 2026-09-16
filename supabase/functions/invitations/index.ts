@@ -7,6 +7,11 @@ import { requireAnyPermission, requirePermission } from "@shared/auth/authorizat
 import { PERMISSIONS } from "@shared/auth/permissions.ts";
 import { listActiveClients } from "@integrations/adhera-core/client.service.ts";
 import { listProgramsForClient } from "@integrations/adhera-core/program.service.ts";
+import {
+  assertClientInScope,
+  filterClientsInScope,
+  filterProgramsInScope,
+} from "@shared/services/client-scope.ts";
 import type {
   ListClientProgramsResponse,
   ListClientsResponse,
@@ -135,7 +140,7 @@ async function handleListClients(c: Context) {
     actor_user_id: actor.id,
   });
 
-  const clients = await listActiveClients();
+  const clients = filterClientsInScope(actor, await listActiveClients());
   const response: ListClientsResponse = { clients };
   return success(response);
 }
@@ -158,7 +163,12 @@ async function handleListClientPrograms(c: Context) {
     client_id: params.clientId,
   });
 
-  const programs = await listProgramsForClient(params.clientId);
+  assertClientInScope(actor, params.clientId);
+
+  const programs = filterProgramsInScope(
+    actor,
+    await listProgramsForClient(params.clientId),
+  );
   const response: ListClientProgramsResponse = { programs };
   return success(response);
 }

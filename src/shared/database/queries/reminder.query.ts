@@ -14,20 +14,24 @@ import type {
   ReminderScheduleSlot,
 } from "@domain/reminder.ts";
 
+import {
+  applyReminderLogFilters,
+  reminderLogScopeSelectsNothing,
+} from "@shared/database/queries/reminder-log-filters.ts";
+import type { ListReminderLogsFilters } from "@shared/database/queries/reminder-log-filters.ts";
+
+export type { ListReminderLogsFilters };
+
 export interface ReminderLogWithInvitation extends OnboardingReminderLogRow {
   patient_invitations: { uuid: string; email: string } | null;
-}
-
-export interface ListReminderLogsFilters {
-  invitationUuid?: string;
-  page: number;
-  perPage: number;
 }
 
 /** Paginated reminder history, joined to the member (email + uuid). */
 export async function listReminderLogs(
   filters: ListReminderLogsFilters,
 ): Promise<{ rows: ReminderLogWithInvitation[]; total: number }> {
+  if (reminderLogScopeSelectsNothing(filters)) return { rows: [], total: 0 };
+
   const db = getServiceClient();
   const fromIdx = (filters.page - 1) * filters.perPage;
   const toIdx = fromIdx + filters.perPage - 1;
@@ -35,15 +39,13 @@ export async function listReminderLogs(
   let query = db
     .from("onboarding_reminder_logs")
     .select(
-      "id, invitation_id, reminder_type, schedule_slot, scheduled_for, sent_at, status, error_message, created_at, patient_invitations!inner(uuid, email)",
+      "id, invitation_id, reminder_type, schedule_slot, scheduled_for, sent_at, status, error_message, created_at, patient_invitations!inner(uuid, email, client_id, program_id)",
       { count: "exact" },
     )
     .order("created_at", { ascending: false })
     .range(fromIdx, toIdx);
 
-  if (filters.invitationUuid) {
-    query = query.eq("patient_invitations.uuid", filters.invitationUuid);
-  }
+  query = applyReminderLogFilters(query, filters);
 
   const { data, count, error } = await query;
   if (error) raiseDbError("Failed to list reminder logs", error);
