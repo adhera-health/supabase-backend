@@ -7,15 +7,11 @@
 
 import { requirePermission } from "@shared/auth/authorization.ts";
 import { PERMISSIONS } from "@shared/auth/permissions.ts";
-import {
-  assertAdminListFiltersAllowed,
-  resolveAdminScope,
-} from "@shared/auth/admin-scope.ts";
+import { buildAnalyticsQueryFilters } from "@shared/services/analytics-scope.ts";
 import {
   getAnalyticsFunnel,
   getAnalyticsOverview,
 } from "@shared/services/analytics.service.ts";
-import type { AnalyticsQueryFilters } from "@shared/database/queries/analytics.query.ts";
 import { createHonoApp } from "@shared/utils/hono.ts";
 import type { Context } from "hono";
 import { createLogger } from "@shared/utils/logger.ts";
@@ -35,18 +31,6 @@ const FUNCTION_NAME = "analytics";
 
 const app = createHonoApp().basePath(`/${FUNCTION_NAME}`);
 
-/** Enforces admin client/program scope on the requested filters. */
-function assertFiltersInScope(
-  actor: Parameters<typeof resolveAdminScope>[0],
-  filters: { client_id?: string; program_id?: string },
-): AnalyticsQueryFilters {
-  assertAdminListFiltersAllowed(resolveAdminScope(actor), filters);
-  return {
-    clientId: filters.client_id,
-    programId: filters.program_id,
-  };
-}
-
 async function handleOverview(c: Context) {
   const logger = createLogger(FUNCTION_NAME);
 
@@ -62,9 +46,7 @@ async function handleOverview(c: Context) {
     date_to: emptyToUndefined(c.req.query("date_to")),
   });
 
-  const filters = assertFiltersInScope(actor, input);
-  filters.dateFrom = input.date_from;
-  filters.dateTo = input.date_to;
+  const filters = buildAnalyticsQueryFilters(actor, input);
 
   logger.info("Computing analytics overview", {
     role: actor.role,
@@ -94,9 +76,7 @@ async function handleFunnel(c: Context) {
     period: c.req.query("period") ?? undefined,
   });
 
-  const filters = assertFiltersInScope(actor, input);
-  filters.dateFrom = input.date_from;
-  filters.dateTo = input.date_to;
+  const filters = buildAnalyticsQueryFilters(actor, input);
 
   logger.info("Computing analytics funnel", {
     role: actor.role,

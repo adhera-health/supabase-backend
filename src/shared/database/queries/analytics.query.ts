@@ -4,15 +4,14 @@
 
 import { getServiceClient } from "@shared/database/client.ts";
 import { raiseDbError } from "@shared/database/queries/db-error.ts";
+import {
+  analyticsScopeSelectsNothing,
+  applyAnalyticsFilters,
+} from "@shared/database/queries/analytics-filters.ts";
+import type { AnalyticsQueryFilters } from "@shared/database/queries/analytics-filters.ts";
 import type { AnalyticsOverview } from "@domain/analytics.ts";
 
-export interface AnalyticsQueryFilters {
-  clientId?: string;
-  programId?: string;
-  /** Inclusive YYYY-MM-DD bounds on invited_at. */
-  dateFrom?: string;
-  dateTo?: string;
-}
+export type { AnalyticsQueryFilters };
 
 const DROPOUT_STATUSES = [
   "dropped_out_voluntary",
@@ -24,24 +23,17 @@ const DROPOUT_STATUSES = [
 // deno-lint-ignore no-explicit-any
 type QueryBuilder = any;
 
-function applyFilters(query: QueryBuilder, f: AnalyticsQueryFilters): QueryBuilder {
-  let q = query;
-  if (f.clientId) q = q.eq("client_id", f.clientId);
-  if (f.programId) q = q.eq("program_id", f.programId);
-  if (f.dateFrom) q = q.gte("invited_at", `${f.dateFrom}T00:00:00.000Z`);
-  if (f.dateTo) q = q.lte("invited_at", `${f.dateTo}T23:59:59.999Z`);
-  return q;
-}
-
 async function countWhere(
   f: AnalyticsQueryFilters,
   refine?: (q: QueryBuilder) => QueryBuilder,
 ): Promise<number> {
+  if (analyticsScopeSelectsNothing(f)) return 0;
+
   const db = getServiceClient();
   let q = db
     .from("patient_invitations")
     .select("id", { count: "exact", head: true });
-  q = applyFilters(q, f);
+  q = applyAnalyticsFilters(q, f);
   if (refine) q = refine(q);
 
   const { count, error } = await q;
@@ -94,6 +86,8 @@ const MAX_ROWS = 50_000;
 export async function fetchInvitationTimestamps(
   f: AnalyticsQueryFilters,
 ): Promise<{ rows: InvitationTimestampsRow[]; truncated: boolean }> {
+  if (analyticsScopeSelectsNothing(f)) return { rows: [], truncated: false };
+
   const db = getServiceClient();
   const rows: InvitationTimestampsRow[] = [];
 
@@ -103,7 +97,7 @@ export async function fetchInvitationTimestamps(
       .select(
         "invited_at, email_opened_at, registered_at, consent_completed_at, activated_at",
       );
-    q = applyFilters(q, f);
+    q = applyAnalyticsFilters(q, f);
     q = q.order("invited_at", { ascending: true }).range(from, from + PAGE_SIZE - 1);
 
     const { data, error } = await q;
