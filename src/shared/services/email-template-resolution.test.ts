@@ -8,7 +8,10 @@
  */
 
 import { assertEquals } from "@std/assert";
-import { pickDefaultTemplate } from "@shared/services/email-template-resolution.ts";
+import {
+  pickDefaultTemplate,
+  templateDeletionBlockReason,
+} from "@shared/services/email-template-resolution.ts";
 import type { EmailTemplateRow } from "@domain/email-template.ts";
 
 function row(partial: Partial<EmailTemplateRow>): EmailTemplateRow {
@@ -68,4 +71,44 @@ Deno.test("without a client only the shared default applies", () => {
 Deno.test("client ids compare as strings", () => {
   // Adhera Core ids are integers upstream, stored as text here.
   assertEquals(pickDefaultTemplate([shared, clientA], 36 as unknown as string)?.name, "Hospital A");
+});
+
+/**
+ * Deletion rule. Templates used to be global, so refusing to delete any default
+ * was right. Now a client's default can go as long as the shared fallback
+ * remains — otherwise that client's sends would have no template at all.
+ */
+
+Deno.test("a non-default template is always deletable", () => {
+  const draft = row({ client_id: "36", is_default: false });
+
+  assertEquals(
+    templateDeletionBlockReason(draft, { sharedDefaultExists: true }),
+    null,
+  );
+  assertEquals(
+    templateDeletionBlockReason(draft, { sharedDefaultExists: false }),
+    null,
+  );
+});
+
+Deno.test("a client default is deletable while the shared fallback exists", () => {
+  assertEquals(
+    templateDeletionBlockReason(clientA, { sharedDefaultExists: true }),
+    null,
+  );
+});
+
+Deno.test("a client default is blocked without a shared fallback", () => {
+  assertEquals(
+    templateDeletionBlockReason(clientA, { sharedDefaultExists: false }),
+    "no_fallback",
+  );
+});
+
+Deno.test("the shared default is never deleted while it is the default", () => {
+  assertEquals(
+    templateDeletionBlockReason(shared, { sharedDefaultExists: true }),
+    "shared_default",
+  );
 });

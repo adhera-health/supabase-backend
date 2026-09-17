@@ -4,7 +4,6 @@
 
 import {
   clearDefaultEmailTemplate,
-  countEmailTemplatesByType,
   deleteEmailTemplateRow,
   getEmailTemplateByUuid,
   insertEmailTemplateRow,
@@ -12,7 +11,10 @@ import {
   listEmailTemplateRows,
   updateEmailTemplateRow,
 } from "@shared/database/queries/email-template.query.ts";
-import { pickDefaultTemplate } from "@shared/services/email-template-resolution.ts";
+import {
+  pickDefaultTemplate,
+  templateDeletionBlockReason,
+} from "@shared/services/email-template-resolution.ts";
 import {
   BadRequestError,
   ConflictError,
@@ -52,8 +54,9 @@ function toEmailTemplateResource(row: EmailTemplateRow): EmailTemplateResource {
 
 export async function listEmailTemplates(
   templateType?: EmailTemplateType,
+  clientId?: string,
 ): Promise<ListEmailTemplatesResponse> {
-  const rows = await listEmailTemplateRows(templateType);
+  const rows = await listEmailTemplateRows(templateType, clientId);
   return { templates: rows.map(toEmailTemplateResource) };
 }
 
@@ -149,13 +152,24 @@ export async function deleteEmailTemplate(
     throw new NotFoundError("Email template not found");
   }
 
-  if (existing.is_default) {
-    const count = await countEmailTemplatesByType(existing.template_type);
-    if (count <= 1) {
-      throw new ConflictError("Cannot delete the only invitation email template");
-    }
+  const defaults = await listDefaultEmailTemplateRows(existing.template_type);
+  const sharedDefaultExists = defaults.some(
+    (row) => row.client_id === null && row.id !== existing.id,
+  );
+
+  const blockReason = templateDeletionBlockReason(existing, {
+    sharedDefaultExists,
+  });
+
+  if (blockReason === "shared_default") {
     throw new ConflictError(
-      "Cannot delete the default template; set another template as default first",
+      "Cannot delete the shared default template; set another template as default first",
+    );
+  }
+
+  if (blockReason === "no_fallback") {
+    throw new ConflictError(
+      "Cannot delete this client's default template while no shared default exists",
     );
   }
 

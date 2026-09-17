@@ -40,6 +40,7 @@ function raiseEmailTemplateDbError(
 
 export async function listEmailTemplateRows(
   templateType?: EmailTemplateType,
+  clientId?: string,
 ): Promise<EmailTemplateRow[]> {
   const db = getServiceClient();
   let query = db
@@ -50,6 +51,10 @@ export async function listEmailTemplateRows(
 
   if (templateType) {
     query = query.eq("template_type", templateType);
+  }
+
+  if (clientId !== undefined) {
+    query = query.eq("client_id", clientId);
   }
 
   const { data, error } = await query;
