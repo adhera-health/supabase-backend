@@ -26,6 +26,8 @@ Deno.test("admin receives all permissions", () => {
   assertEquals(permissions.includes(PERMISSIONS.USERS_CREATE), true);
   assertEquals(permissions.includes(PERMISSIONS.INVITATIONS_DROP_OUT), true);
   assertEquals(permissions.includes(PERMISSIONS.AUDIT_LOGS_VIEW), true);
+  assertEquals(permissions.includes(PERMISSIONS.EMAIL_TEMPLATES_MANAGE), true);
+  assertEquals(permissions.includes(PERMISSIONS.EMAIL_TEMPLATES_READ_DEFAULT), true);
 });
 
 Deno.test("recruiter runs all operations except user management", () => {
@@ -34,7 +36,15 @@ Deno.test("recruiter runs all operations except user management", () => {
   assertEquals(hasPermission(recruiter, PERMISSIONS.INVITATIONS_SEND), true);
   assertEquals(hasPermission(recruiter, PERMISSIONS.INVITATIONS_VIEW_ALL), true);
   assertEquals(hasPermission(recruiter, PERMISSIONS.INVITATIONS_DROP_OUT), true);
-  assertEquals(hasPermission(recruiter, PERMISSIONS.EMAIL_TEMPLATES_MANAGE), true);
+  // Templates are tenant-owned and admin-managed: a recruiter editing the
+  // shared template would change the email every other client's patients get.
+  // Recruiters only read the default to pre-fill the form; per-send overrides
+  // are unaffected.
+  assertEquals(hasPermission(recruiter, PERMISSIONS.EMAIL_TEMPLATES_MANAGE), false);
+  assertEquals(
+    hasPermission(recruiter, PERMISSIONS.EMAIL_TEMPLATES_READ_DEFAULT),
+    true,
+  );
   assertEquals(hasPermission(recruiter, PERMISSIONS.CONSENT_DOCUMENTS_MANAGE), true);
   assertEquals(hasPermission(recruiter, PERMISSIONS.DASHBOARD_ANALYTICS_VIEW), true);
   assertEquals(hasPermission(recruiter, PERMISSIONS.AUDIT_LOGS_VIEW), true);

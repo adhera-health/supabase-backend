@@ -26,8 +26,11 @@ export const PERMISSIONS = {
   // Consent documents (admin)
   CONSENT_DOCUMENTS_MANAGE: "consent_documents.manage",
 
-  // Email templates (admin)
+  // Email templates. Templates are tenant-owned, so managing them is admin-only:
+  // editing the shared template changes the email every client's patients get.
+  // Recruiters only read the default to pre-fill the send form.
   EMAIL_TEMPLATES_MANAGE: "email_templates.manage",
+  EMAIL_TEMPLATES_READ_DEFAULT: "email_templates.read_default",
 
   // Dashboard
   DASHBOARD_ANALYTICS_VIEW: "dashboard.analytics.view",
@@ -59,7 +62,7 @@ const RECRUITER_PERMISSIONS: readonly Permission[] = [
   PERMISSIONS.INVITATIONS_DROP_OUT,
   PERMISSIONS.INVITATIONS_ATTENTION_REASONS_VIEW,
   PERMISSIONS.CONSENT_DOCUMENTS_MANAGE,
-  PERMISSIONS.EMAIL_TEMPLATES_MANAGE,
+  PERMISSIONS.EMAIL_TEMPLATES_READ_DEFAULT,
   PERMISSIONS.DASHBOARD_ANALYTICS_VIEW,
   PERMISSIONS.AUDIT_LOGS_VIEW,
   PERMISSIONS.LICENSE_RESERVATIONS_CREATE,

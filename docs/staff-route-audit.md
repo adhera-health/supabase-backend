@@ -26,12 +26,12 @@ longer stops the request (see `fix/await-secret-guards`, commit `52a039c`).
 | `GET /analytics/funnel` | `requirePermission(DASHBOARD_ANALYTICS_VIEW)` | yes (:66) | none |
 | `POST /consent-documents/upload` | `requirePermission(CONSENT_DOCUMENTS_MANAGE)` | yes (:48) | none (body parsed after) |
 | `POST /consent-documents/:id/activate` | `requirePermission(CONSENT_DOCUMENTS_MANAGE)` | yes (:95) | none |
-| `GET /email-templates/` | `requirePermission(EMAIL_TEMPLATES_MANAGE)` | yes (:58) | none |
-| `GET /email-templates/default` | `requirePermission(EMAIL_TEMPLATES_MANAGE)` | yes (:73) | none |
-| `GET /email-templates/:template_uuid` | `requirePermission(EMAIL_TEMPLATES_MANAGE)` | yes (:88) | none |
-| `POST /email-templates/` | `requirePermission(EMAIL_TEMPLATES_MANAGE)` | yes (:104) | none |
-| `PATCH /email-templates/:template_uuid` | `requirePermission(EMAIL_TEMPLATES_MANAGE)` | yes (:141) | none |
-| `DELETE /email-templates/:template_uuid` | `requirePermission(EMAIL_TEMPLATES_MANAGE)` | yes (:178) | none |
+| `GET /email-templates/` | `requirePermission(EMAIL_TEMPLATES_MANAGE)` — admin-only | yes (:61) | none |
+| `GET /email-templates/default` | `requirePermission(EMAIL_TEMPLATES_READ_DEFAULT)` + `assertClientInScope` when `client_id` given | yes (:79) | none |
+| `GET /email-templates/:template_uuid` | `requirePermission(EMAIL_TEMPLATES_MANAGE)` — admin-only | yes (:102) | none |
+| `POST /email-templates/` | `requirePermission(EMAIL_TEMPLATES_MANAGE)` — admin-only | yes (:118) | none |
+| `PATCH /email-templates/:template_uuid` | `requirePermission(EMAIL_TEMPLATES_MANAGE)` — admin-only | yes (:156) | none |
+| `DELETE /email-templates/:template_uuid` | `requirePermission(EMAIL_TEMPLATES_MANAGE)` — admin-only | yes (:193) | none |
 | `GET /invitations/` and `GET /invitations` | `requireAnyPermission(INVITATIONS_VIEW_ALL, _VIEW_OWN)` | yes (:387) | none |
 | `GET /invitations/clients` | `requirePermission(INVITATIONS_CLIENTS_LIST)` | yes (:132) | none |
 | `GET /invitations/clients/:clientId/programs` | `requirePermission(INVITATIONS_CLIENTS_LIST)` | yes (:154) | none (param parsed first) |

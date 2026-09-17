@@ -11,6 +11,7 @@ import type {
   UpdateEmailTemplateInput,
 } from "@domain/email-template.ts";
 import { parseSchema } from "@shared/validators/parse-schema.ts";
+import { tenantIdStringSchema } from "@shared/validators/tenant-id.schema.ts";
 import {
   findMissingRequiredInvitationPlaceholders,
   sanitizeInvitationEmailHtmlBody,
@@ -66,6 +67,8 @@ const htmlBodySchema = invitationHtmlBodySchema;
 export const createEmailTemplateSchema = z.object({
   name: z.string().trim().min(1).max(120),
   template_type: templateTypeSchema,
+  /** Omit (or null) to create the shared fallback template. */
+  client_id: tenantIdStringSchema.nullish(),
   subject: subjectSchema,
   html_body: htmlBodySchema,
   is_default: z.boolean().optional(),
@@ -102,6 +105,8 @@ export type EmailTemplateUuidParamsPayload = z.infer<
 
 export const listEmailTemplatesQuerySchema = z.object({
   template_type: templateTypeSchema.optional(),
+  /** Narrow the admin list to one client's templates. */
+  client_id: tenantIdStringSchema.optional(),
 });
 
 export type ListEmailTemplatesQueryPayload = z.infer<
@@ -110,6 +115,8 @@ export type ListEmailTemplatesQueryPayload = z.infer<
 
 export const getDefaultEmailTemplateQuerySchema = z.object({
   template_type: templateTypeSchema.default("invitation"),
+  /** Resolves this client's template, falling back to the shared one. */
+  client_id: tenantIdStringSchema.optional(),
 });
 
 export type GetDefaultEmailTemplateQueryPayload = z.infer<

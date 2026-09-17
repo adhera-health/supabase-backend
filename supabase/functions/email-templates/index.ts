@@ -11,6 +11,7 @@
 
 import { requirePermission } from "@shared/auth/authorization.ts";
 import { PERMISSIONS } from "@shared/auth/permissions.ts";
+import { assertClientInScope } from "@shared/services/client-scope.ts";
 import { logAuditEvent } from "@shared/services/audit.service.ts";
 import {
   createEmailTemplate,
@@ -61,24 +62,35 @@ async function handleListEmailTemplates(c: Context) {
   );
   const query = parseSchema(listEmailTemplatesQuerySchema, {
     template_type: c.req.query("template_type") || undefined,
+    client_id: c.req.query("client_id") || undefined,
   });
 
-  const result = await listEmailTemplates(query.template_type);
+  const result = await listEmailTemplates(query.template_type, query.client_id);
   const response: ListEmailTemplatesResponse = result;
 
   return success(response);
 }
 
 async function handleGetDefaultEmailTemplate(c: Context) {
-  await requirePermission(
+  // Read-only: recruiters pre-fill the send form with their client's template,
+  // while creating and editing templates stays admin-only.
+  const actor = await requirePermission(
     c.req.header("Authorization"),
-    PERMISSIONS.EMAIL_TEMPLATES_MANAGE,
+    PERMISSIONS.EMAIL_TEMPLATES_READ_DEFAULT,
   );
   const query = parseSchema(getDefaultEmailTemplateQuerySchema, {
     template_type: c.req.query("template_type") ?? "invitation",
+    client_id: c.req.query("client_id") || undefined,
   });
 
-  const result = await getDefaultEmailTemplate(query.template_type);
+  if (query.client_id !== undefined) {
+    assertClientInScope(actor, query.client_id);
+  }
+
+  const result = await getDefaultEmailTemplate(
+    query.template_type,
+    query.client_id,
+  );
   const response: GetEmailTemplateResponse = result;
 
   return success(response);
@@ -127,6 +139,7 @@ async function handleCreateEmailTemplate(c: Context) {
     metadata_json: {
       name: result.template.name,
       template_type: result.template.template_type,
+      client_id: result.template.client_id,
       is_default: result.template.is_default,
     },
   });

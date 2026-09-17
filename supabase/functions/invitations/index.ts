@@ -212,7 +212,8 @@ async function handleSendInvitation(c: Context) {
 
   const contentOverride = buildContentOverride(input.email_override);
   // Fail before DB writes when default template is missing or override HTML is invalid.
-  await resolveInvitationEmailContent(contentOverride);
+  // Core client ids arrive as integers and are stored as their string form.
+  await resolveInvitationEmailContent(contentOverride, String(input.client_id));
   await assertSelectedClientProgramValid(input, logger);
 
   const { invitation, token: onboardingToken } = await createInvitationWithToken(
@@ -334,8 +335,19 @@ async function handleResendInvitation(c: Context) {
     "@shared/services/invitation-email.service.ts"
   );
 
+  // Loaded first (tenant-scope checked) so the template resolves for this
+  // invitation's client, while still failing before resendInvitationToken
+  // writes a new token.
+  const existingInvitation = await getInvitationForAdminAction(
+    params.invitation_id,
+    actor,
+  );
+
   const contentOverride = buildContentOverride(parsedBody?.email_override);
-  await resolveInvitationEmailContent(contentOverride);
+  await resolveInvitationEmailContent(
+    contentOverride,
+    existingInvitation.client_id,
+  );
 
   const { invitation, token: onboardingToken } = await resendInvitationToken(
     params.invitation_id,
