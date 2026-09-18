@@ -10,3 +10,5 @@ supabase/functions/.env
 .env.development
 .env.test
 .env.production
+# Supabase CLI link state (project ref, pooler url, versions)
+supabase/.temp/
